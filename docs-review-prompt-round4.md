@@ -29,10 +29,22 @@ CUATRO HECHOS, y el tercero es material:
     diciendo "with Claude"; solo cambio el identificador
   - El arbol puede tener cambios sin confirmar. Mira git status y DI sobre que
     estas trabajando: confirmado, sin confirmar, o mezcla
-  - DOS RELEASES SE PUBLICARON Y NO SE INSTALARON. v0.1.1 por la forma del zip
-    (entradas de directorio, compresion mezclada) y v0.1.2 porque el nombre
-    contenia una palabra reservada. Las dos pasaron el pipeline entero en verde
-    Y el validador de referencia
+  - EL HISTORIAL DE PUBLICACION, comprobado con git tag y gh release list:
+
+      v0.1    tag, SIN release. El pipeline paro en el comprobador de prosa
+      v0.1.1  tag y release. EL BUNDLE PUBLICADO NO INSTALA: el zip llevaba
+              entradas de directorio y compresion mezclada. SIGUE PUBLICADO
+      v0.1.2  no existe
+      v0.1.3  tag y release, Latest. Es el que hay que mirar
+
+    Hubo un segundo fallo de instalacion entre medias -- el nombre contenia una
+    palabra reservada -- sobre un bundle construido en local que nunca llego a
+    publicarse. Lo cuento porque explica el renombrado, no porque haya una
+    release detras.
+
+    ASI QUE DOS BUNDLES SEGUIDOS NO INSTALARON, uno publicado y otro no, los dos
+    con el pipeline entero en verde Y el validador de referencia dando por bueno
+    el contenido
   - Los cambios que vas a validar los escribio la misma sesion que causo esos
     dos fallos, en una sola pasada, sin que nadie los haya mirado
 
@@ -148,6 +160,11 @@ Coge el .skill, metelo en las dos partes -- perfil de Claude y ~/.claude/skills
 o .claude/skills -- y comprueba que los comandos de instalacion del README hacen
 exactamente lo que dicen. Es lo primero que le pasa a cualquiera que llegue al
 repositorio, y es lo unico que dos releases seguidas no consiguieron.
+
+Y mira tambien el camino que nadie ha mirado: LA RELEASE v0.1.1 SIGUE PUBLICADA
+Y SU BUNDLE NO INSTALA. ¿Que le pasa a alguien que llega ahi -- desde un enlace
+viejo, desde la lista de releases, desde una busqueda? ¿Dice algo el README o la
+propia release sobre que version coger? ¿Y que error ve exactamente esa persona?
 
 Sin valorarlo. Si falla, describe como falla y en que paso.
 
