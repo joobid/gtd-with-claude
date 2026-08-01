@@ -231,9 +231,32 @@ the thing this method exists to catch.
 
 ## Install and start
 
-**1. Install the skill.** Download `gtd-with-claude.skill` from the
-[latest release](../../releases/latest) and open it, or save the folder into your skills
-directory.
+**The two agents read skills from different places, so install it twice.** They are separate
+stores, not one shared library — a skill saved into your Claude profile does not appear on the
+Claude Code filesystem, and vice versa.
+
+**1a. Cowork.** Download `gtd-with-agents.skill` from the
+[latest release](../../releases/latest) and open it — the file card has a **Save skill** button.
+
+**1b. Claude Code.** Unpack the same bundle into a skills directory. Either scope works, and the
+choice is about reach, not about the method:
+
+```sh
+mkdir -p ~/.claude/skills                        # every project of yours
+unzip -q gtd-with-agents.skill -d ~/.claude/skills
+
+mkdir -p .claude/skills                          # or: this project only, shared with the repo
+unzip -q gtd-with-agents.skill -d .claude/skills
+```
+
+Confirm it landed as `<dir>/gtd-with-agents/SKILL.md` — the bundle carries its own folder, so
+unzipping *into* the skills directory is correct and unzipping into a subfolder nests it one level
+too deep. Then `/gtd-with-agents` exists in a new session.
+
+> **Why Claude Code needs it and not just the paste-prompt.** The bootstrap prompt tells it what
+> to do; the skill is what lets it *re-read the protocol* when a question comes up months later.
+> A prompt is prose citing identifiers, and prose citing identifiers decays. This is the same
+> reason setup copies two files into the channel itself.
 
 **2. Open a Cowork session in the project and ask for it.**
 
@@ -403,8 +426,9 @@ assets/
   bootstrap-cowork.md    startup prompt for a cold Cowork session
   config-template.md     where the chosen configuration is written
 scripts/
-  validate_skill.py      checks the bundle's shape, and proves itself by failing on purpose
+  validate_skill.py      checks what the bundle contains, and proves itself by failing on purpose
   check_doc_commands.py  runs the documented queries against a fixture with a known answer
+  package_skill.py       writes the archive, and checks what the archive *is*
 .github/workflows/
   release.yml            builds and checks the bundle on a version tag
 ```
@@ -420,17 +444,28 @@ Everything else works on a thesis, a research project or a campaign as readily a
 
 ### Releases
 
-Tagging `v*` builds `gtd-with-claude.skill` and attaches it to the release. The pipeline will
+Tagging `v*` builds `gtd-with-agents.skill` and attaches it to the release. The pipeline will
 not publish a bundle it has not checked:
 
 1. It **proves its own validator first** — one deliberate mutation per rule, and it fails unless
    every one is rejected *and* the untouched skill is still accepted. The count lives in
    `validate_skill.py`, not here: a figure maintained in two places goes stale in one of them
 2. It validates the source tree
-3. It checks that everything `MANIFEST` lists was staged, and that nothing shippable is missing
-   from `MANIFEST`
-4. It builds the zip, **extracts it somewhere clean, and validates that** — the artifact is what
-   gets installed, and it is a different object from the tree it was built from
+3. It checks `MANIFEST` in both directions — nothing listed is missing, nothing shippable is
+   unlisted
+4. It **runs the commands this documentation contains**, against a fixture channel with a known
+   answer, because a fenced block is a claim and two reviews found the costliest defects in
+   commands nobody had executed
+5. It builds the bundle and then checks **two different things about it**: what it *contains*
+   (extracted somewhere clean and put through the validator) and what it *is* (files only,
+   deflated, exactly the manifest, one root)
+
+**Step 5 is split in two because of a real failure.** `v0.1.1` shipped a bundle that every
+content check approved — the official skill validator said it was valid — and it would not
+install. The archive had been built with `zip -r`, which emits directory entries and mixes
+compression; nothing here had ever looked at the archive as an object rather than as a
+container. Two conditions, one of them untested, which is `verification.md` §9 happening to
+the file that documents §9.
 
 The rules it enforces are the ones that make an upload fail: exactly one `SKILL.md`, kebab-case
 name under 64 characters, and a description under 1024 characters **with no angle brackets** —

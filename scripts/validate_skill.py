@@ -39,6 +39,12 @@ MAX_DESCRIPTION = 1024
 MAX_COMPATIBILITY = 500
 ALLOWED_KEYS = {"name", "description", "license", "allowed-tools", "metadata", "compatibility"}
 
+# Words the installer refuses inside `name:`. "claude" is OBSERVED -- it is the error that
+# rejected v0.1.2. The others are inferred from the same policy and have not been seen to
+# fire, which is stated rather than implied: an unverified entry costs a rename, a missing
+# one costs a release.
+RESERVED_IN_NAME = {"claude", "anthropic"}
+
 # Mirrors what packaging excludes, so a SKILL.md that never ships does not count.
 EXCLUDED_ANYWHERE = {"__pycache__", "node_modules"}
 EXCLUDED_AT_ROOT = {"evals"}
@@ -179,6 +185,15 @@ def validate(root: Path, manifest: list[str] | None = None,
             name,
         )
         check(f"name at most {MAX_NAME} characters", len(name) <= MAX_NAME, f"{len(name)}")
+        # Not in the reference validator. Learned by installing: a bundle named
+        # `gtd-with-claude` passed every local check, passed the reference validator, and
+        # was refused at install with "Skill name in SKILL.md cannot contain the reserved
+        # word 'claude'". The rule lives in the installer, and the validator this file's
+        # rules were read from does not have it -- so "we mirror the official validator"
+        # was never the same claim as "this will install".
+        hit = sorted(w for w in RESERVED_IN_NAME if w in name)
+        check("name contains no reserved word", not hit,
+              f"{hit} in {name!r}" if hit else "")
 
     desc = fm.get("description")
     check("description present and a string", isinstance(desc, str) and bool(desc.strip()))
@@ -221,7 +236,10 @@ def _report(checks) -> str:
 MUTATIONS = {
     "description over the limit": lambda d: _sub(d, "description", "x" * (MAX_DESCRIPTION + 1)),
     "description with angle brackets": lambda d: _sub(d, "description", "does a thing for <you>"),
-    "name in the wrong case": lambda d: _sub(d, "name", "Gtd_With_Claude"),
+    "name in the wrong case": lambda d: _sub(d, "name", "Gtd_With_Agents"),
+    # The literal name v0.1.2 was published with. It passed every check here and every
+    # check in the reference validator, and the installer refused it.
+    "a reserved word in the name": lambda d: _sub(d, "name", "gtd-with-claude"),
     "unexpected frontmatter key": lambda d: _add_key(d, "author: someone"),
     "a second shipping SKILL.md": lambda d: _extra_skill_md(d),
     "no SKILL.md at all": lambda d: (d / "SKILL.md").unlink(),

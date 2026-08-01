@@ -19,6 +19,20 @@ No es una ronda de revision. Hay tres informes adversariales en el arbol
 
   Informe: ~/claude/gtd-with-claude/docs-review-scoring.md
 
+CUATRO HECHOS QUE NECESITAS ANTES DE EMPEZAR, y el tercero es material:
+
+  - La skill se llama gtd-with-agents. El repositorio y el titulo siguen diciendo
+    "with Claude"; solo cambio el identificador, porque el instalador prohibe la
+    palabra reservada
+  - El bundle lo construye scripts/package_skill.py, no zip. Hay tag y pipeline
+  - DOS RELEASES SE PUBLICARON Y NO SE INSTALARON. v0.1.1 por la forma del zip
+    (entradas de directorio) y v0.1.2 por el nombre. Las dos pasaron el pipeline
+    entero en verde y el validador de referencia. Eso es informacion sobre la
+    calidad del metodo, no solo sobre dos bugs, y quiero que pese en la nota
+  - Hay una tabla nueva en config-template.md, "Where the method itself is
+    installed": cada agente declara si tiene la skill, con fecha. NO es
+    verificacion mutua y el documento dice que no lo es
+
 ═══════════════════════════════════════════════════════════════════════
 LO QUE SE PUNTUA
 ═══════════════════════════════════════════════════════════════════════
@@ -34,13 +48,14 @@ cumplen: metodo completo y no solo el canal; ingles en todo el contenido del
 repositorio; SKILL instalable con README de cara a GitHub; nucleo agnostico
 con anexo para lo que dependa de una herramienta.
 
-Cinco notas de 0 a 10, cada una con su justificacion:
+Seis notas de 0 a 10, cada una con su justificacion:
 
   A · Objetivo 1 — minimizar interaccion
   B · Objetivo 2 — mantener informado
   C · Objetivo 3 — garantizar la decision
   D · Coherencia con sus propias decisiones cerradas
-  E · GLOBAL — y NO es la media. Di por que no lo es
+  E · Instalacion — de descargar el .skill a tenerlo funcionando en los dos lados
+  F · GLOBAL — y NO es la media. Di por que no lo es
 
 ═══════════════════════════════════════════════════════════════════════
 COMO QUIERO QUE PUNTUES, QUE ES LA MITAD DEL ENCARGO
@@ -103,20 +118,36 @@ LAS PREGUNTAS DIFICILES, UNA POR OBJETIVO
       herramienta concreta sin estar marcado como anexo? Compruebalo, no lo
       supongas
 
+  E · INSTALALA. Es la casilla que nunca se ha cerrado en tres rondas. Coge el
+      .skill del release, metelo en las dos partes -- perfil de Claude y
+      ~/.claude/skills o .claude/skills -- y comprueba que los comandos de
+      instalacion del README hacen lo que dicen. Si algo falla ahi, es la nota
+      mas importante del informe, porque es lo primero que le pasa a cualquiera
+
+  F · LA TABLA DE INSTALACION, que es lo ultimo que se ha anadido y por tanto lo
+      menos probado. Cada agente declara si tiene la skill y compara con su fila;
+      si discrepan, corrige el fichero y lo anota. Preguntas: ¿que pasa si los
+      dos agentes corrigen la misma fila a la vez? ¿que pasa la primera vez, con
+      el fichero recien escrito y ninguna sesion abierta? ¿anade mas interaccion
+      de la que quita? ¿y es honesta la distincion entre autoinforme y
+      verificacion, o se lee como si el metodo comprobara algo que no comprueba?
+
 ═══════════════════════════════════════════════════════════════════════
 COMO QUIERO EL INFORME
 ═══════════════════════════════════════════════════════════════════════
 
   1. Que ejecutaste y que no. Al principio, antes de cualquier nota
   2. Las escalas ancladas: que es un 10 y que es un 5, por objetivo
-  3. Las cinco notas, con las restas nombradas
+  3. Las seis notas, con las restas nombradas
   4. La tabla una hora / un mes
   5. LO QUE MAS SUBE LA NOTA MAS BAJA con un solo cambio. Uno, no una lista
   6. ¿Que nota le pondrias a esta skill frente a NO USAR NINGUN METODO y
      limitarse a copiar y pegar entre las dos sesiones? Es la comparacion
      honesta, y puede salir mal
-  7. La pregunta que no te he hecho y que habria cambiado alguna nota
+  7. La E va con su propio relato: dos releases no instalaron, asi que di
+     tambien que habria hecho falta para cazarlos ANTES de publicar
+  8. La pregunta que no te he hecho y que habria cambiado alguna nota
 
 No quiero elogios, ni reescrituras de estilo, ni propuestas de funcionalidad
-nueva. Quiero cinco numeros que aguanten que alguien discuta cada uno.
+nueva. Quiero seis numeros que aguanten que alguien discuta cada uno.
 ```

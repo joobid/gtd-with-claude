@@ -69,58 +69,37 @@ jobs:
           python scripts/check_doc_commands.py --self-test
           python scripts/check_doc_commands.py
 
-      - name: Stage exactly what the manifest lists
-        run: |
-          set -euo pipefail
-          # `zip -r out.skill dir` UPDATES an existing archive instead of replacing it, so
-          # a stale file from an earlier build survives into a freshly staged bundle. It is
-          # the same shape as `>` on an existing file: the operation looks like "write" and
-          # is "merge". Both paths are removed rather than assumed absent.
-          rm -rf build gtd-with-claude.skill
-          mkdir -p build/gtd-with-claude
-          while read -r f; do
-            case "$f" in ''|\#*) continue ;; esac
-            test -f "$f" || { echo "FATAL: manifest lists $f and it does not exist"; exit 1; }
-            mkdir -p "build/gtd-with-claude/$(dirname "$f")"
-            cp "$f" "build/gtd-with-claude/$f"
-          done < MANIFEST
-          echo "--- staged ---"
-          find build/gtd-with-claude -type f | sort
+      # v0.1.1 shipped a bundle whose CONTENT every check approved and which did not
+      # install: `zip -r` emits directory entries and mixes compression, and no check here
+      # looked at what the archive WAS rather than what it held. Same reason `zip -r` also
+      # merged a stale file from an earlier build into a freshly staged one. Both are gone
+      # because the archive is now written from Python, which has no pre-existing object to
+      # merge into and emits no directory entries.
+      - name: Prove the packager rejects a wrongly shaped bundle
+        run: python scripts/package_skill.py --self-test
 
-      - name: Build the bundle
-        run: |
-          set -euo pipefail
-          cd build
-          zip -qr ../gtd-with-claude.skill gtd-with-claude -x '*.DS_Store' '*__pycache__*'
-          cd ..
-          unzip -l gtd-with-claude.skill
-
-      # The artifact is what gets installed, and it is a different object from the tree it
-      # was built from -- so it is extracted somewhere clean and put through the validator
-      # WITH THE MANIFEST, which is the part that was missing. Validating only the
-      # frontmatter here would apply to the zip a strictly weaker check than to the tree, in
-      # exactly the dimension (is anything missing?) for which the distinction matters. A
-      # bundle containing only SKILL.md used to pass this step.
-      - name: Validate the extracted bundle, which is what people install
-        run: |
-          set -euo pipefail
-          rm -rf verify && mkdir verify
-          unzip -q gtd-with-claude.skill -d verify
-          test -d verify/gtd-with-claude || { echo "FATAL: bundle has no gtd-with-claude/ root"; exit 1; }
-          # --exact: the bundle is the manifest and nothing else. Without it this step
-          # checked one direction only -- everything listed is present -- and a bundle
-          # carrying an extra file printed "14 files, 13 manifest paths" and then VALID.
-          python scripts/validate_skill.py verify/gtd-with-claude --manifest MANIFEST --exact
+      # Builds it, then checks it twice: SHAPE (files only, deflated, exactly the manifest,
+      # one root) and CONTENT (extracted and put through the validator with --exact). The
+      # artifact is a different object from the tree it came from, and until v0.1.1 only
+      # the tree had ever been judged.
+      - name: Build the bundle and check what it is, not only what it holds
+        run: python scripts/package_skill.py
 
       - name: Report what is being published
         run: |
           set -euo pipefail
           echo "tag:   ${GITHUB_REF_NAME}"
-          echo "size:  $(du -h gtd-with-claude.skill | cut -f1)"
-          echo "files: $(unzip -l gtd-with-claude.skill | tail -1)"
+          echo "size:  $(du -h gtd-with-agents.skill | cut -f1)"
+          python - <<'PY'
+          import zipfile
+          z = zipfile.ZipFile("gtd-with-agents.skill")
+          print("files:", len(z.infolist()))
+          for n in sorted(z.namelist()):
+              print("  ", n)
+          PY
 
       - name: Publish it on the release
         uses: softprops/action-gh-release@v2
         with:
-          files: gtd-with-claude.skill
+          files: gtd-with-agents.skill
           generate_release_notes: true

@@ -1,7 +1,7 @@
 # Working agreement
 
 <!--
-  Written by the gtd-with-claude setup. This is a PROJECT FILE, not a chat decision:
+  Written by the gtd-with-agents setup. This is a PROJECT FILE, not a chat decision:
   a decision that lives only in a conversation is not a decision, because conversations end.
 
   Revisit it when the answers stop matching how the work actually goes. A configuration
@@ -24,6 +24,31 @@
 | Lives at | `<path>` |
 | Excluded from version control | `<yes / no / not applicable>` |
 | `head:` prefix in use | `<sha: — staleness check available / clock: — no staleness check>` |
+
+## Where the method itself is installed
+
+The two agents read skills from **different stores**, and neither can see the other's. Whether
+the skill is loaded over there is an event in another process — so it is recorded here, where
+both can read it.
+
+| Agent | Skill available to it | Observed |
+|---|---|---|
+| Reviewing (`<tool>`) | `<yes / no>` | `<date>` |
+| Implementing (`<tool>`) | `<yes, at ~/.claude/skills / yes, at .claude/skills / no>` | `<date>` |
+
+**This is a self-report with a date, not a verification, and the difference is the same one
+`head:` makes.** Each agent can observe its own side and nothing else; a `yes` written in January
+still reads `yes` in March after somebody uninstalled it. What makes it useful is the rule below,
+not the row.
+
+> **Every session compares its own side against its row before doing anything else.** Agreeing
+> costs nothing and produces no message. **Disagreeing means this file is wrong** — so that agent
+> corrects the row, records the correction in the channel, and says which way it went. A stale row
+> is then wrong for one session rather than for ever.
+
+Where an agent's answer is `no`, it cannot open `reference/protocol.md` and works from the two
+files copied into the channel. That is a supported configuration, not a broken one — but the other
+agent has to know, because it changes what that agent can be asked to consult.
 
 ## What the person decides
 

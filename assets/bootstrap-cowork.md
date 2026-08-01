@@ -28,6 +28,21 @@ runs directory before concluding anything about it.
 AND YOU CANNOT ANSWER A PERMISSION PROMPT. Those are modal and live inside the other tool's
 interface. No file reaches them. Questions go through the channel; approvals stay with the person.
 
+CHECK WHETHER /gtd-with-agents IS AVAILABLE HERE. If it is, use it: this prompt is a summary and
+the skill is the method. If it is not, work from <channel>/README.md.
+
+Then compare that against your own row in the configuration file, under "Where the method itself
+is installed". Agreeing produces no message. Disagreeing means THE FILE IS WRONG: correct the row
+and its Observed date, and write one message recording it.
+
+AND READ THE OTHER AGENT'S ROW, because it changes what you may ask of it. If it says the skill is
+not available there, that agent cannot open reference/protocol.md and is working from the two
+files copied into the channel -- so cite those, never a reference path, and do not read a
+divergence from the protocol as carelessness when it is a document it cannot reach.
+
+That row is a self-report with a date, like a clock: head. You cannot verify it from here and you
+do not try: it says what somebody observed, and only the session on that side can refresh it.
+
 FIRST ACTION: measure the state and present it before proposing anything. What is unsaved, what
 the checks return, what the last messages in the channel say, and which of them are still open:
 

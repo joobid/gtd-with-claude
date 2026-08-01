@@ -14,6 +14,22 @@ identifiers, and it decays.
   <channel>/README.md                 how the two agents talk to each other
   <the project's own instructions file, if there is one>
 
+FIRST, CHECK WHETHER /gtd-with-agents EXISTS IN THIS SESSION, and do not guess which case you
+are in. If it does, use it: it is the full method, and it is the only way you can read
+reference/protocol.md rather than the summary in this message. If it does not, work from
+<channel>/README.md and <channel>/message-template.md, which carry the format and the writer.
+
+THEN COMPARE WHAT YOU FOUND against the row for the implementing agent in the configuration file,
+under "Where the method itself is installed".
+
+  they agree     say nothing. No message, no noise
+  they disagree  THE FILE IS WRONG, not you. Correct the row and its Observed date, then write
+                 ONE message to the channel recording which way it went
+
+That row is the only way the reviewing agent can know whether you can open the reference files at
+all -- it cannot see this session, and an event in a process nobody can read is not state. You are
+the only party that can turn it into state, and the file goes stale the moment you decline to.
+
 YOUR PART. You implement, run the checks, and write the command blocks the person executes. You
 do not run destructive commands without approval, do not edit your own permission configuration,
 and do not widen a declared scope on your own.

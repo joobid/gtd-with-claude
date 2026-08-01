@@ -1,5 +1,5 @@
 ---
-name: gtd-with-claude
+name: gtd-with-agents
 description: Set up and run the three-party working method for a project driven by Claude Code and Claude Cowork together — a file-based channel the two agents use to talk to each other, an explicit delegation contract that records what the person decides and what they hand over, and the verification culture that makes agreement between two agents worth anything. Use this whenever someone is starting a project with both Claude Code and Cowork, asks how the two should coordinate, says they are tired of copying questions from one session and pasting answers into the other, asks "who decides what here", "how do I stay informed without approving everything", "how much can I delegate", or wants to install a working agreement, an exchange channel, or an approval policy between agents. Also use when a session arrives cold at a project that already has this method installed and needs to pick it up.
 ---
 
@@ -162,6 +162,48 @@ and the method has silently stopped existing with nothing detecting it.
 
 Where the tool has a persistent instructions file, offer to add a three-line pointer to it as well.
 A paste-prompt is prose citing identifiers, and prose citing identifiers decays.
+
+#### And check the implementing agent can reach this skill at all
+
+**The two agents read skills from different stores.** Being installed here says nothing about
+being installed there, and the difference is invisible from this side — which is exactly the
+state/events frontier applied to the method's own installation.
+
+So during setup, **ask the person to confirm it is installed on the implementing side too**, and
+tell them where it goes. For Claude Code that is a skills directory on the filesystem:
+
+```sh
+mkdir -p ~/.claude/skills                        # all their projects
+unzip -q gtd-with-agents.skill -d ~/.claude/skills
+
+mkdir -p .claude/skills                          # or this project only, shared with the repo
+unzip -q gtd-with-agents.skill -d .claude/skills
+```
+
+The bundle carries its own folder, so it unzips **into** the skills directory and lands at
+`<dir>/gtd-with-agents/SKILL.md`. Then `/gtd-with-agents` works in a new session there.
+
+Say plainly why it is worth the second install: the bootstrap prompt tells that agent what to do
+**once**, and the skill is what lets it re-read the protocol in month three when a question comes
+up. Without it, `reference/protocol.md` is a path that agent cannot open, and the only copy of the
+format it can reach is the one in the channel.
+
+**If they decline or cannot**, that is a workable configuration and not a broken one — the two
+copied channel files exist for exactly this case.
+
+**Either way, fill the "Where the method itself is installed" table in the configuration**, one
+row per agent, with the date each was observed. Then say out loud what that table is and is not:
+
+> Neither agent can see the other's session, so **this is a self-report with a date, not a
+> verification** — the same distinction `head: sha:` makes against `head: clock:`. What makes it
+> worth having is that **every session compares its own row before doing anything else**: agreeing
+> is silent, and disagreeing means the file is wrong and gets corrected there and then. A row that
+> goes stale is wrong for one session instead of for ever.
+
+Both bootstrap prompts carry that comparison already. The reviewing side also reads the *other*
+row, because an agent that cannot open `reference/protocol.md` has to be cited channel files
+rather than reference paths — and a divergence from the protocol by an agent that cannot read the
+protocol is a missing document, not carelessness.
 
 Tell them plainly what the method does *not* do, in your own words:
 

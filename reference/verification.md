@@ -229,6 +229,8 @@ Writing that sentence is what produces the fix, every time:
 | A prompt appears where you expected one | A machine with nothing configured, which prompts anyway | **Plant** the permission first, then confirm the prompt still wins |
 | A self-test reports the mutation was noticed | Anything else failing at the same time | Compare the finding **sets** before and after |
 | A validator declares *N rules over M files* | An `M` dominated by objects nobody validates | Exclude them, or the declaration has stopped meaning what it says |
+| A package contains exactly the right files | **A container nothing can open.** Every check read the payload; none looked at the envelope | Check what the artefact **is**, not only what it holds |
+| The official validator approves it | **A validator that is not the one that admits it.** Rules read from a reference implementation are the rules that implementation has, not the rules the gate enforces | Say *"mirrors the reference validator"*, never *"this will be accepted"* — and when the gate refuses, add its rule here rather than only fixing the instance |
 
 Every row of that table is a real defect from this repository's own history, and they are one
 shape six times: **the passing condition was much weaker than the claim it certified.**
