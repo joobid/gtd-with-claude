@@ -1,0 +1,118 @@
+name: Build and publish the skill bundle
+
+# A .skill file is a zip of the skill directory. Building it on a tag rather than by hand
+# means the published bundle is always the tagged tree: nobody has to remember to rebuild,
+# and there is no version of the bundle that does not correspond to a commit.
+#
+# The order below is the point of this file. A bundle that installs and then does nothing --
+# because the description is too long, or an asset never got copied -- is a check whose
+# failure mode is to report success, which is the defect this repository exists to document.
+# So the pipeline refuses to publish rather than publish something it has not looked at, and
+# it proves its own validator before trusting it.
+#
+# MANIFEST is the single source of truth for what ships. Staging reads it and verification
+# reads it, because two lists drift and the drift is invisible: each one stays internally
+# consistent while they disagree with each other.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install what the validator needs
+        run: pip install --quiet pyyaml
+
+      # Before trusting the validator, break it on purpose and check that it screams. It
+      # mutates a temporary copy once per rule and fails unless every one is rejected AND
+      # the untouched skill is still accepted. A verifier that has never been seen to fail
+      # is not evidence, including this one.
+      - name: Prove the validator fails when it should
+        run: python scripts/validate_skill.py . --manifest MANIFEST --self-test
+
+      - name: Validate the source tree
+        run: python scripts/validate_skill.py . --manifest MANIFEST
+
+      # Nothing shippable may be missing from MANIFEST. The list is checked in one
+      # direction by staging (manifest -> tree); this is the other (tree -> manifest).
+      # Without it a new reference file cited by SKILL.md ships as a dangling reference
+      # under a fully green pipeline, because MANIFEST is a second list maintained by
+      # hand -- the shape this project already calls out as failing silently.
+      - name: Nothing shippable is missing from MANIFEST
+        run: |
+          set -euo pipefail
+          missing=0
+          for f in reference/*.md assets/*.md SKILL.md LICENSE; do
+            grep -qxF "$f" MANIFEST || { echo "FATAL: $f is in the tree and not in MANIFEST"; missing=1; }
+          done
+          test "$missing" = 0 || { echo "Add it, or add an explicit '# not shipped:' line."; exit 1; }
+          echo "checked $(ls reference/*.md assets/*.md | wc -l) shippable documents"
+
+      # A fenced command block in the documentation is a claim. This runs them against a
+      # fixture channel with known ground truth. Two adversarial reviews found that the
+      # costliest defects were all in commands nobody had executed.
+      - name: The documented commands do what they claim
+        run: |
+          python scripts/check_doc_commands.py --self-test
+          python scripts/check_doc_commands.py
+
+      - name: Stage exactly what the manifest lists
+        run: |
+          set -euo pipefail
+          mkdir -p build/gtd-with-claude
+          while read -r f; do
+            case "$f" in ''|\#*) continue ;; esac
+            test -f "$f" || { echo "FATAL: manifest lists $f and it does not exist"; exit 1; }
+            mkdir -p "build/gtd-with-claude/$(dirname "$f")"
+            cp "$f" "build/gtd-with-claude/$f"
+          done < MANIFEST
+          echo "--- staged ---"
+          find build/gtd-with-claude -type f | sort
+
+      - name: Build the bundle
+        run: |
+          set -euo pipefail
+          cd build
+          zip -qr ../gtd-with-claude.skill gtd-with-claude -x '*.DS_Store' '*__pycache__*'
+          cd ..
+          unzip -l gtd-with-claude.skill
+
+      # The artifact is what gets installed, and it is a different object from the tree it
+      # was built from -- so it is extracted somewhere clean and put through the validator
+      # WITH THE MANIFEST, which is the part that was missing. Validating only the
+      # frontmatter here would apply to the zip a strictly weaker check than to the tree, in
+      # exactly the dimension (is anything missing?) for which the distinction matters. A
+      # bundle containing only SKILL.md used to pass this step.
+      - name: Validate the extracted bundle, which is what people install
+        run: |
+          set -euo pipefail
+          rm -rf verify && mkdir verify
+          unzip -q gtd-with-claude.skill -d verify
+          test -d verify/gtd-with-claude || { echo "FATAL: bundle has no gtd-with-claude/ root"; exit 1; }
+          python scripts/validate_skill.py verify/gtd-with-claude --manifest MANIFEST
+
+      - name: Report what is being published
+        run: |
+          set -euo pipefail
+          echo "tag:   ${GITHUB_REF_NAME}"
+          echo "size:  $(du -h gtd-with-claude.skill | cut -f1)"
+          echo "files: $(unzip -l gtd-with-claude.skill | tail -1)"
+
+      - name: Publish it on the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: gtd-with-claude.skill
+          generate_release_notes: true

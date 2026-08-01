@@ -1,0 +1,245 @@
+---
+name: gtd-with-claude
+description: Set up and run the three-party working method for a project driven by Claude Code and Claude Cowork together — a file-based channel the two agents use to talk to each other, an explicit delegation contract that records what the person decides and what they hand over, and the verification culture that makes agreement between two agents worth anything. Use this whenever someone is starting a project with both Claude Code and Cowork, asks how the two should coordinate, says they are tired of copying questions from one session and pasting answers into the other, asks "who decides what here", "how do I stay informed without approving everything", "how much can I delegate", or wants to install a working agreement, an exchange channel, or an approval policy between agents. Also use when a session arrives cold at a project that already has this method installed and needs to pick it up.
+---
+
+# Get Things Done with Claude
+
+A working method for projects where **Claude Code implements**, **Claude Cowork reviews and
+plans**, and **a person decides what the two agents cannot settle between them**.
+
+It exists because of one failure: when two agents cannot talk to each other, the person becomes
+the cable. They copy a question out of one session and paste an answer into the other, and in
+that transcription precision is lost and work is gained. This method replaces the cable with a
+directory of files that both agents read and write.
+
+Three goals, and they matter equally:
+
+- **Minimise** the person's interaction
+- **Keep them informed** of what is being done, at all times
+- **Guarantee** that what is theirs to decide, they decide — always
+
+The third is not a nice-to-have. Delegation without a floor is not efficiency, it is opacity.
+
+---
+
+## What this skill does when it triggers
+
+Two situations. Read which one you are in before doing anything.
+
+**A · The project has no configuration yet.** Run the setup below: choose the language, run the
+delegation questionnaire, create the channel, write the configuration, hand over the two
+bootstrap prompts.
+
+**B · The configuration already exists.** Do not run the questionnaire again. Read the
+configuration file, read the channel from oldest to newest, and report where things stand.
+`assets/bootstrap-cowork.md` is written for exactly this case.
+
+To tell them apart, look for a configuration file — by default `gtd-config.md` at the project
+root. If you do not find it, ask before assuming: a project may keep it elsewhere.
+
+---
+
+## Setup
+
+### Step 1 · The language the person is addressed in
+
+Ask first, because everything you write for them afterwards depends on it.
+
+> **In which language should the two agents address you?**
+
+Whatever they answer applies to conversation, reports and questions — everything a person reads.
+
+**It does not apply to the channel.** Every file under the exchange directory is written in
+**English**, always, whatever the person chose. Those files are not for them: they are how two
+agents synchronise, they get grepped, and one convention beats two. Say this out loud when you
+ask, so it is a stated decision and not a surprise later.
+
+### Step 2 · The delegation questionnaire
+
+This is the heart of the setup. Ask with `AskUserQuestion`, grouped so it is a handful of
+questions and not twenty. Read `reference/approvals.md` for the full question set, the wording of
+each level, and the floor.
+
+Every activity is offered at three levels:
+
+| | |
+|---|---|
+| **DECIDE** | The person decides, every time, before anything happens |
+| **CONSENSUS** | The two agents agree, act, and tell them afterwards |
+| **DELEGATED** | The agents act and do not interrupt. It stays in the record |
+
+**Present every option with its gain and its cost in the same sentence.** Not "recommended" —
+what they get and what they give up. A person choosing CONSENSUS for version control should read
+that they stop approving twenty commits a day *and* that they will learn the shape of the history
+after it is written. If they cannot see the cost, they have not chosen.
+
+### Step 3 · The floor that is not on offer
+
+Some classes cannot be delegated even if the person asks. Show them, say why each one is there,
+and do not offer a level for them.
+
+| Class | Why it cannot be delegated |
+|---|---|
+| **Personal or real data, privacy, history rewriting** | The damage is not undone by reverting. Once something is published or written into a history, consent cannot be retrofitted |
+| **Destructive actions with no inverse** | Delegation assumes a mistake is recoverable. Where it is not, the assumption fails |
+| **Spending money** | The agents do not hold the mandate. An error here leaves the person's account, not a file |
+| **Anything that reaches a third party** | The person's name is on it. A message sent in someone's name cannot be recalled by deciding it was a mistake |
+
+If someone insists on delegating one of these, do not do it. Explain that the method stops
+guaranteeing what it says it guarantees, and offer the nearest thing that is safe: agents prepare
+and the person confirms in one step.
+
+#### And be honest about what the floor is
+
+**This document is not a mechanism.** It is four rows read by the agent it restricts, and this same
+skill teaches the reader to distrust exactly that shape — *confirm the mechanism, not the
+document*. Pretending otherwise would make the floor the phantom control of its own method.
+
+So during setup, **put a real mechanism behind it wherever one exists, and record per class whether
+you did**:
+
+**`reference/floor-mechanism.md` is the procedure** — where the rules live, what to write, the four
+requests that test them, and what an ineffective rule looks like next to a working one. Read it
+here; do not improvise a syntax.
+
+- Where the tool has a permission configuration, write **deny rules** and then **verify they
+  refuse**. A rule that has not been seen to block is a rule nobody has tested.
+- **Whatever the outcome, it leaves a log, and the configuration records the path to it.** Never
+  `verified` without one: a floor certification is an event, and an event with no artefact is an
+  assertion.
+- Where no mechanism exists, say so: `none — agreement only`. Typically two of the four classes.
+
+A floor that declares which of its four rows has teeth is honest. One that implies all four do is
+the thing this method exists to catch.
+
+### Step 4 · Where the channel lives
+
+Ask, or detect and confirm:
+
+- **With a version-controlled project** — inside an already-ignored run directory, so raw output
+  never gets committed. See `reference/git-annex.md`
+- **Without one** — a plain folder such as `exchange/`
+
+Create the directory and copy **two** files into it:
+
+| From | To | Why |
+|---|---|---|
+| `assets/exchange-README.md` | `<channel>/README.md` | The channel explains itself to whoever opens it |
+| `assets/message-template.md` | `<channel>/message-template.md` | **It carries the command that reads the clock** |
+
+The second one is not optional and the reason is specific. Claude Code never sees this skill's
+files — they live in Cowork's cache. Telling it to "use the command in the template" while the
+template is somewhere it cannot reach is prose citing an identifier, and nothing reads prose: it
+will type the timestamp from its own context instead, which is the one defect the protocol is most
+emphatic about, and it fails silently until a message sorts in front of its own reply.
+
+### Step 5 · Write the configuration
+
+Fill `assets/config-template.md` with what was chosen and save it to the project. **The
+configuration is a project file, not a chat decision** — a decision that lives only in a
+conversation is not a decision, because conversations end.
+
+Then **write the questionnaire answers into the channel as the first `from: owner` message.** The
+founding decisions — the language, the delegation levels, which agent does what — are the most
+important ones the person will ever make here, and without this step `grep -E '^from: +owner'` returns
+nothing on day one while both agents are told to treat it as the list of what is settled.
+
+It also gives the channel a baseline: that message's `head:` is the state the project started from.
+
+### Step 6 · Hand over the two bootstrap prompts
+
+**Write both filled-in prompts into the project**, next to the configuration file — not only into
+the chat. The same rule as Step 5 applies and applies harder: these are needed **every time a
+session opens**, not once. A prompt that exists only in a chat message is gone by month three, and
+then a session starts without it, does not read the channel, does not record what the person says,
+and the method has silently stopped existing with nothing detecting it.
+
+Where the tool has a persistent instructions file, offer to add a three-line pointer to it as well.
+A paste-prompt is prose citing identifiers, and prose citing identifiers decays.
+
+Tell them plainly what the method does *not* do, in your own words:
+
+> No file wakes anyone up. Cowork cannot answer a permission prompt in Claude Code — those are
+> modal and live inside its interface. What disappears is the copying and the transcription risk,
+> not the turn-taking.
+
+A method that promises more than that is lying, and the person will find out at the worst moment.
+
+---
+
+## Running the method
+
+Once installed, four things govern the work. Each has a reference file; read the one you need
+rather than all of them.
+
+| | |
+|---|---|
+| `reference/roles.md` | The three parts, and the **state/events frontier** that makes review possible |
+| `reference/protocol.md` | The channel: file names, front matter, immutability, and why each choice |
+| `reference/approvals.md` | The questionnaire, the traffic-light triage, the floor |
+| `reference/verification.md` | Why agreement between two agents is worth anything: declared scope, verifiers proven by breaking them, measurement rules |
+| `reference/floor-mechanism.md` | How to put a real mechanism behind the floor, and how to prove it refuses |
+| `reference/git-annex.md` | Only what depends on having a repository |
+
+### The two rules to carry without opening anything
+
+**Cowork verifies state, not events.** It can read files; it cannot know whether something ran or
+what it returned. If the project does not record it, the answer is *"no record here"* — never
+*"not done"*. This is why every command block writes its output to a file: it turns an event into
+state, and then anyone can read it afterwards.
+
+**A check whose failure mode is to report success is worse than no check.** Everything in
+`reference/verification.md` is that sentence applied to a different surface.
+
+### Everything the person is asked is recorded too
+
+Not only agent-to-agent traffic. When a session asks the person something, they answer inside
+that session and **the other one never learns it happened** — an event that leaves no state. The
+second agent then reasons about a project shaped by a decision it cannot see.
+
+So anything the person is asked, and what they answered, goes in the channel under `from: owner`,
+written by whichever agent heard it **and read by the other before it proposes anything** — in
+both directions. A permission prompt answered in the implementing session and a scope decision
+taken in the reviewing one are the same kind of event, and **the second is the one that gets
+forgotten**, even though it is usually the bigger decision.
+
+A permission prompt blocks, so it is recorded immediately afterwards rather than before. The test
+for what belongs there is narrow: **would the other agent behave differently if it knew this?**
+
+This does not let the reviewing agent answer a prompt — that limit is unchanged. It means it
+knows the prompt happened, which is the part that was costing something.
+
+### Disagreement
+
+Two agents who disagree **do not escalate**. They exchange until one of them is shown a fact,
+with the command that produced it. What reaches the person is what survived the facts, marked
+`state: escalated`.
+
+A number that does not reproduce is not a disagreement yet. Check first whether the two sides are
+measuring the same object.
+
+---
+
+## Keeping the person informed
+
+Delegation without information is not efficiency, it is opacity — so the questionnaire also asks
+how much they want to read and how often, and that answer has to produce something real.
+
+At minimum, the person can answer *"what has happened since yesterday?"* with one command over
+the channel and the project's own record, without asking either agent. Write that command into
+the configuration file, for their project, and check it returns something before you claim it
+works.
+
+And the reverse direction is what makes it honest: **a consensus that changes a plan, a guide or
+a scope lands in a permanent project file in the same milestone, or it did not happen.** The
+channel holds the deliberation; the project holds the decision.
+
+---
+
+## When you are asked to do this without the skill's assets
+
+If for any reason the reference or asset files are unavailable, the method still reduces to
+something you can set up from this file alone: a directory, one immutable file per message with
+the five front-matter keys, a configuration file recording who decides what, and the floor above.
+Say which parts you are reconstructing rather than pretending the full method is installed.

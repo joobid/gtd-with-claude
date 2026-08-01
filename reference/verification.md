@@ -1,0 +1,243 @@
+# Why agreement between two agents is worth anything
+
+Delegating to CONSENSUS rests on a claim: that two agents agreeing is better evidence than one
+agent asserting. That claim is only true if both are measuring, and measuring is a discipline
+rather than an intention.
+
+Everything here comes from the same sentence:
+
+> **A check whose failure mode is to report success is worse than no check at all.**
+
+Worse, not equal. A missing check is a known gap. A check that reports success without having
+looked gets cited in discussions, decisions get built on it, and nobody interrogates it — because
+it is *the check*.
+
+---
+
+## 1 · Every verifier declares what it examined
+
+"No problems" and "no problems in 140 files" are different statements, and the first is
+indistinguishable from not having looked.
+
+So a check prints its scope alongside its verdict, and **refuses to approve when the scope is
+empty**. Three outcomes, not two:
+
+| | |
+|---|---|
+| **clean** | Examined at least what it claims to cover, found nothing |
+| **finding** | Examined properly, found something real |
+| **blind** | Examined less than it claims. **This is not an approval** |
+
+The blind state is the one that usually does not exist, and it is where the failures live: a tool
+run from the wrong directory, a search over an empty input, a check looking for a kind of thing
+the project does not contain. All of them print success and return zero.
+
+**And a declared scope ages.** A floor written when the project had 165 files still says 165 when
+it has 194, and the check can quietly stop looking at 29 of them while reporting exactly what it
+reported before. Whatever maintains the declaration has to run, or the declaration is a claim
+with an expiry date and no date on it.
+
+## 2 · A verifier is not trusted until it has been seen to fail
+
+Break it on purpose against a case it must catch, and check that it screams. Then restore it.
+
+Two cautions, both learned the expensive way:
+
+- **Check the return code, not the output.** A verifier that fails to start prints nothing and
+  returns a code nobody read; empty output is indistinguishable from success to anyone reading
+  text.
+- **Breaking it on purpose requires guessing the failure mode correctly. Declaring what it
+  examined protects you even when you guess wrong.** Of the two habits, the second is primary —
+  it was discovered by the first one failing.
+
+**This applies to a verifier written in five minutes to confirm a fix.** Those are the ones that
+get believed without proof, because they feel like part of the fix rather than a new instrument.
+
+## 3 · Measuring
+
+Five rules, each from a case where the arithmetic was right and the object was wrong.
+
+1. **No figure about behaviour without opening what produces it.** If it cannot be run, replicate
+   the logic and say that you replicated it.
+2. **Declare the object in the same sentence as the figure.** "The file contains X" and "the
+   application computes X" are different claims.
+3. **Every estimate declares its unit of work** — and declaring the unit does not guarantee the
+   unit *is* the work. A count of things that look like the task can include things that cannot
+   be touched at all, and miss a whole group that turns out to be zero.
+4. **When someone else's figure does not reproduce, check first whether it measures the same
+   thing** before attributing the difference to method. Two correct measurements of different
+   objects look exactly like one correct and one wrong.
+5. **A hand-written list of terms measures whoever wrote it, not the project.** To size
+   something, enumerate the project and classify; the list is only useful for prioritising inside
+   what is already enumerated.
+
+## 4 · Scope
+
+**A tool whose reach is wider than the task must have its scope mandatory, not configurable.** A
+parameter with a default is a parameter that gets forgotten, and when it is forgotten the default
+is the wide scope.
+
+Three faces, all of which have to be checked:
+
+| | |
+|---|---|
+| **Empty** | The tool ran over nothing and reported success |
+| **Narrow** | Part of the work was left out of the batch |
+| **Wide** | The tool reached work belonging to something else |
+
+Writing files has the same three faces, and the wide one is `>`. **A file that already exists is
+edited, never overwritten** — replacing it takes everything you did not mean to change, and a
+check that watches *which* files changed will not notice.
+
+### The shape that hides inside a correct measurement
+
+**A measurement has a shelf life, and nothing on it declares when it expired.** A figure taken
+correctly, five minutes before the project moved, looks exactly like a current one — it was
+executed, the command was right, the arithmetic was right. It is worse than not measuring,
+because there is nothing about it to distrust.
+
+The defence is the same one as everywhere else: the figure travels with what it was measured
+against. A count without a version attached is a count you cannot date.
+
+**And it applies to generated values too.** A timestamp typed from memory instead of read from
+the clock, an identifier written from recall instead of resolved, are asserted values in the one
+place nobody inspects — because a filename or a metadata line does not look like a claim.
+
+## 5 · Before trusting a control, check that it exists
+
+A control that does not exist is worse than a verifier that reports success without looking: the
+verifier at least runs and can surprise you, while a phantom is cited in discussions and nobody
+interrogates it, because it is "how the project is configured".
+
+The pattern to watch for: a policy file that names reviewers, a status check that looks
+mandatory, a rule everyone repeats. Any of them can be advisory. **Confirm the mechanism, not the
+document.**
+
+## 6 · Point the instrument at itself, on purpose
+
+This is a practice, not a warning, and it has the highest yield of anything here.
+
+The recurring pattern: a check that scans everything **except the file that declares its own
+exception**. A rule that enumerates five surfaces and never names the document containing the
+rule. A link checker with a dead link inside its own comment. A file whose header says it gets
+rewritten, accumulating five sections because nobody re-read it.
+
+They are all the same hole, and they share one property: **nobody looks there, because it is the
+instrument.** Whoever built it knows what it does, so they check the work instead.
+
+Two habits, both cheap:
+
+- **Every structural exemption carries its own assertion.** If a file is skipped by a check, there
+  is a test that looks at it *with the exemption lifted*. That exemption is, by definition, the
+  one place in the project nothing watches.
+- **When you write a rule, ask whether it applies to itself, and write the answer down.** The
+  defect is rarely the answer — it is the silence. A governing document that does not say whether
+  it governs itself will be read both ways.
+
+## 7 · Two correct rules can have a wrong intersection
+
+A rule that says what **not** to do, without naming what has to **survive**, leaves every
+compliant reading looking correct.
+
+The case that produced this: a file was destroyed by being overwritten, so the rule became *edit,
+never overwrite*. It was followed exactly — and each new section got appended above the last,
+because "edit" permits adding. Five milestones later the file was mostly obsolete sections and
+none of them described the live content. The rule was right. What it did not say was that the
+**header** had to survive and the **section** had to be replaced.
+
+> **State the invariant, not just the forbidden method.** And when a preservation rule
+> ("nothing is deleted") meets an object that declares itself transient, the preservation rule
+> does not apply — that is data hygiene, not a licence for files to accumulate.
+
+## 8 · Four names that a change does not carry with it
+
+Whenever something gets renamed — a symbol, a file, a key, a section — four frontiers exist where
+the new name does not follow, and only the first is loud.
+
+| Frontier | What it looks like | Loud? |
+|---|---|---|
+| A name that is also a **string** | Accessed by reflection or by lookup, often with a fallback value | **Silent** when there is a default: it returns the default instead of failing |
+| An **argument consumed as a key** | Declared in one place as a parameter, read elsewhere as a literal key | Loud, but only on the path that runs |
+| **Prose citing an identifier** | A message, comment or document naming a constant, a path or a command | Silent. Nothing reads prose |
+| A symbol belonging to **something outside the project** | An interface with a file, a service or a person's own artefact | **Silent, and no check in the project can ever see it** |
+| **Prose containing an executable** | A fenced command block in a document | **Silent, and worse than the row above: a command does not look like a claim, it looks like a fact, and every reader assumes somebody ran it** |
+
+The fourth is the dangerous one. Before renaming, the question is not *is this in our language?*
+but **does this project own the name?** If the symbol crosses a boundary the project does not
+control, it is data, not an identifier — the same category as a stored key or a published field.
+
+A useful tell: if a rename touched one symbol of a pair and not the other, it was applied **by
+form** — matching what looked like a candidate — rather than **by category**. That asymmetry is
+evidence, and it is easier to spot than the breakage.
+
+## 9 · A check that partitions on two conditions has four regions
+
+Name all four before deciding which ones to act on. Two of them usually get implemented, one is
+obviously fine, and the fourth is where things quietly live:
+
+| | Included | Not included |
+|---|---|---|
+| **Inside the declared scope** | correct | caught: incomplete work |
+| **Outside the declared scope** | caught: foreign work | **invisible** |
+
+The invisible region falls between the two filters — each one excludes it for a different reason.
+It is not necessarily an error to have things there, so it should **report rather than block**: a
+check that forbids legitimate local work gets switched off, and then protects nothing. The
+difference between "I decided that" and "nobody looked" is the whole point.
+
+### The fifth row is the one that cost the most
+
+A documented query that matches nothing survived a full adversarial review, a rewrite and a
+release-shaped bundle — because it was read as a fact rather than as a claim. Ten citations across
+six files, and the front matter it searched was written with two spaces while every query used one.
+
+> **A fenced command block is a claim, and it carries the output it produced when someone ran it.**
+
+That is the same rule this file already applies to figures — *no figure about behaviour without
+opening what produces it* — applied to a document's own commands. The stronger form, and the one
+worth building: **extract every fenced block and run it against a fixture in the pipeline.** It is
+the self-test pointed one level out. The validator proves the bundle; nothing proved the prose.
+
+## 10 · Extending a barrier does not re-examine what it already recorded
+
+When a check gets better, the new logic covers what arrives next. What was recorded under the old
+logic stays as it was — and the check, running its new logic, correctly reports that there is
+nothing new.
+
+This is the general shape of every guardrail migration, and it is silent by construction. When
+you widen a check, **re-apply it to its own existing record in the same change**, and say that
+you did.
+
+---
+
+## Every command block leaves a record
+
+This is the mechanism that converts an event into state, and it is what lets the reviewing agent
+work at all.
+
+**Any block of commands writes its output to a file — whoever runs it.** Without exception, even a
+single line.
+
+The "whoever" is load-bearing. An implementing agent holds a shell and runs things itself; if the
+rule only covered blocks handed to a person, everything that agent did alone would leave no trace,
+and the reviewing agent would be correct to say *"no record here"* about most of the project. The
+frontier that makes review possible would close over the work being reviewed.
+
+```
+<runs-directory>/YYYYMMDD-HHMMSS-<slug>.log
+```
+
+Four rules about the content:
+
+1. **Capture both output streams.** Errors travel on the one nobody reads.
+2. **Take the return code on the line after the command**, never inside a formatting call with a
+   substitution in it — the substitution runs first and you capture its code instead.
+3. **The header declares what it ran against** — the version, the branch, whatever identifies the
+   state. A record that does not say what it ran against cannot be judged still valid, and a
+   figure measured before the project moved looks exactly like a current one.
+4. **The block ends by printing the path of its own log**, so it can be named without hunting for
+   it.
+
+And one rule about the directory: **it is raw, unsanitised output by design.** It is where a real
+value lands if one is ever printed. It never gets shared, published or committed, and nothing
+scans it — what protects it is that it does not leave.

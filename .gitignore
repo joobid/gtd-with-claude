@@ -1,0 +1,11 @@
+# Working output. Raw and unsanitised by design: it is where a real value lands
+# if one is ever printed. It never gets versioned.
+.runs/
+exchange/
+
+# Build products. The bundle is produced by the release pipeline from MANIFEST,
+# not committed -- a committed bundle is one nobody can prove came from the tag.
+*.skill
+build/
+verify/
+__pycache__/
