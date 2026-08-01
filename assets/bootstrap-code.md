@@ -19,11 +19,22 @@ are in. If it does, use it: it is the full method, and it is the only way you ca
 reference/protocol.md rather than the summary in this message. If it does not, work from
 <channel>/README.md and <channel>/message-template.md, which carry the format and the writer.
 
+If you cannot tell from the session itself, look on disk -- this is the check, not a guess:
+
+    ls -d ~/.claude/skills/gtd-with-agents .claude/skills/gtd-with-agents 2>/dev/null
+
 THEN COMPARE WHAT YOU FOUND against the row for the implementing agent in the configuration file,
 under "Where the method itself is installed".
 
+  no such row, or no
+  configuration file   SAY SO ONCE and carry on from <channel>/README.md. Every project installed
+                       before this table existed is in that state, and so is any configuration
+                       written by hand. It is not an error and it is not yours to create
+
   they agree     say nothing. No message, no noise
-  they disagree  WRITE ONE MESSAGE to the channel saying what you found. DO NOT EDIT THE
+  they disagree  WRITE ONE MESSAGE to the channel, state: open and to: owner, saying what you
+                 found. Those two values are what make it visible to the open-questions query
+                 instead of scrolling out of ls -1 after twenty messages. DO NOT EDIT THE
                  CONFIGURATION FILE -- if both agents corrected their own rows it would have two
                  writers, which is the shape protocol.md rejects for a shared status file. The
                  message is the fresher fact and the person folds it back in later

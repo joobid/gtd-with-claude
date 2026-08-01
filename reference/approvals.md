@@ -40,9 +40,15 @@ the moment of asking.
 > record stays yours. **cost:** you are in the loop for every checkpoint, including the twenty
 > trivial ones an ordinary working day produces.
 
-> **CONSENSUS — gain:** you stop approving twenty commits a day, and each one still had to
-> satisfy a second agent. **cost:** you learn the shape of the history after it is written, and a
+> **CONSENSUS — gain:** you stop approving twenty checkpoints a day, and each one still had to
+> satisfy a second agent. **cost:** you learn the shape of the record after it is written, and a
 > bad structure is cheapest to fix before it exists.
+
+**"Twenty a day" is illustrative and nobody measured it**, here or anywhere else in this file.
+It is the right order of magnitude for an active codebase and it is wrong for a thesis. Say the
+number for *their* project if you know it, and say you are guessing if you do not — a figure
+quoted back later as the method's biggest saving, when its only source is this sentence, is the
+measurement defect `verification.md` opens with, committed in the document that teaches it.
 
 > **DELEGATED — gain:** the single highest-frequency interruption disappears completely.
 > **cost:** this is the one activity here that can reach other people — publishing to a shared
@@ -281,15 +287,20 @@ ask is not *"is this correct?"* — that is not answerable at a glance and shoul
 
 > **If this is wrong, do I get it back?**
 
+**Answer it against whatever your project uses as its record**, and the table is written that way
+on purpose. A thesis, a research project and a campaign each have one — a saved draft, a dated
+copy, a shared folder that keeps versions — and none of them is a codebase. The question is what
+you can return to, never which tool holds it.
+
 | | What it is | What to do |
 |---|---|---|
-| 🟢 | Reading, searching, status and history queries, running tests, editing files already saved in the project's history | **Yes, without thinking** |
-| 🟡 | Adding named files, saving a checkpoint, creating a branch, creating new files | **Yes, if the block carries its own check** |
-| 🔴 | Anything that discards unsaved work, force-publishing, deleting, touching real data, rewriting history, adding everything at once, **spending money, or sending anything to a third party** | **No. Bring it to the other agent first** |
+| 🟢 | Reading, searching, listing, running a check, changing something already in the record | **Yes, without thinking** |
+| 🟡 | Adding named things, saving a new point you could return to, creating new files | **Yes, if the block carries its own check** |
+| 🔴 | Anything that discards work not yet in the record, overwrites the record itself, deletes without an inverse, touches real data, **spends money, or sends something to a third party** | **No. Bring it to the other agent first** |
 
 **"Carries its own check" means the block confirms and shows its own effect after acting** — not
-that the command exited zero. A checkpoint that prints what it saved, an add that prints what is
-staged, a write that reads the file back. Exit zero says the tool ran; it says nothing about what
+that the command exited zero. A save that prints what it saved, an addition that prints what it
+added, a write that reads the file back. Exit zero says the tool ran; it says nothing about what
 it did, and the amber row is where the volume is, so the difference decides how much of the day the
 person spends reading output that could have checked itself.
 
@@ -299,6 +310,11 @@ not mention is a floor that gets forgotten by Tuesday.
 
 **If you do not understand what a command does, it is red.** Not from general caution: a command
 can look like it measures and measure nothing.
+
+**With a version-controlled project**, `git-annex.md` has the same three rows written out in that
+vocabulary, with the specific spellings that belong in each. That file is the annex on purpose:
+this table is the instrument used every day, and a daily instrument that only works on a codebase
+would quietly narrow the method to codebases.
 
 ### "Yes, and don't ask again" is usually the wrong answer
 
@@ -314,7 +330,7 @@ Reserve it for read-only commands. For anything that writes, approve each time.
 A bare refusal leaves the agent guessing, and it retries a variant. **Say no and why, in one
 line:**
 
-> *No. There is unsaved work; save the batch first, then repeat this.*
+> *No. There is work not yet in the record; save it first, then repeat this.*
 > *No. That block does not carry its own check.*
 > *No. That touches real data, which is not in this milestone.*
 

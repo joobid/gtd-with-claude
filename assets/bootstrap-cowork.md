@@ -33,7 +33,9 @@ the skill is the method. If it is not, work from <channel>/README.md.
 
 Then compare that against your own row in the configuration file, under "Where the method itself
 is installed". Agreeing produces nothing. Disagreeing produces ONE message to the channel saying
-what you found -- and you DO NOT EDIT the configuration file. Two agents correcting their own rows
+what you found, with state: open and to: owner -- those two values are what keep it visible to
+the open-questions query instead of scrolling out of ls -1. And you DO NOT EDIT the
+configuration file. Two agents correcting their own rows
 would give that file two writers, which is the shape protocol.md rejects. The state is derived:
 the table is what was set up, your message is the fresher fact.
 

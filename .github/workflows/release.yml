@@ -69,6 +69,31 @@ jobs:
           python scripts/check_doc_commands.py --self-test
           python scripts/check_doc_commands.py
 
+      # The pipeline checked the ARTEFACT thoroughly and never once checked a claim the
+      # repository makes about itself. Of the three objectives it declares, zero were
+      # covered; of the four closed decisions, one. The three costliest defects of the
+      # fifth review were all of that kind -- a number written twice that stopped
+      # agreeing, a value shape enforced in three documents of four, an example modelling
+      # the opposite of the paragraph above it -- and each was a four-line grep of the
+      # same shape as the MANIFEST step twenty lines up.
+      - name: Prove the claim checks fail when they should
+        run: python scripts/check_own_claims.py --self-test
+
+      - name: The repository does what it says it does
+        run: python scripts/check_own_claims.py
+
+      # The bundle now carries its own version, so an installed copy can say which one it
+      # is. That is only worth anything if it matches the tag it ships under.
+      - name: The version in SKILL.md is the tag being published
+        run: |
+          set -euo pipefail
+          declared=$(python -c "import re,sys;print(re.search(r'^  version:\s*(\S+)',open('SKILL.md').read(),re.M).group(1))")
+          echo "declared: $declared   ·   tag: ${GITHUB_REF_NAME}"
+          test "v$declared" = "${GITHUB_REF_NAME}" || {
+            echo "FATAL: SKILL.md says $declared and the tag says ${GITHUB_REF_NAME}."
+            echo "An installed skill that misreports its own version is worse than one that says nothing."
+            exit 1; }
+
       # v0.1.1 shipped a bundle whose CONTENT every check approved and which did not
       # install: `zip -r` emits directory entries and mixes compression, and no check here
       # looked at what the archive WAS rather than what it held. Same reason `zip -r` also

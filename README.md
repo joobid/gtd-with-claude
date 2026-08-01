@@ -73,7 +73,7 @@ from: cowork
 to: code
 re: -
 state: open
-head: 9f3c1a2
+head: sha:9f3c1a2
 ---
 
 The scope floors have not moved since they were first written by hand, and the function
@@ -97,7 +97,7 @@ from: code
 to: cowork
 re: 20260801-112306-cowork-floor-does-not-ratchet.md
 state: escalated
-head: 9f3c1a2
+head: sha:9f3c1a2
 ---
 
 Confirmed, and it was not deliberate — the ratchet was designed and never wired.
@@ -435,6 +435,7 @@ scripts/
   validate_skill.py      checks what the bundle contains, and proves itself by failing on purpose
   check_doc_commands.py  runs the documented queries against a fixture with a known answer
   package_skill.py       writes the archive, and checks what the archive *is*
+  check_own_claims.py    checks the claims this repository makes about itself
 .github/workflows/
   release.yml            builds and checks the bundle on a version tag
 ```

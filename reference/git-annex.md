@@ -101,3 +101,31 @@ whatever was convenient at the time. Review them the way you would review any co
   invisible from either side alone.
 - **An agent does not edit its own permission file.** An agent that can widen its own limits has
   advisory limits.
+
+## The daily triage, in version-control vocabulary
+
+`approvals.md` Part 3 asks one question — *if this is wrong, do I get it back?* — against
+whatever a project uses as its record. Here is that table with the record being a repository,
+and the specific spellings that belong in each row.
+
+It lives here rather than there for a reason worth stating: **the triage is the instrument used
+every day**, and the questionnaire is shown once. A daily instrument written only in commits and
+branches would have quietly narrowed the whole method to codebases, which is exactly what the
+core promises it does not do.
+
+| | Here that means |
+|---|---|
+| 🟢 | `status`, `log`, `diff`, `show`, `grep`, running tests, editing a file already committed |
+| 🟡 | `add <named paths>`, `commit`, `switch -c`, `stash push`, creating new files |
+| 🔴 | `reset --hard`, `checkout` over unsaved work, `clean`, `push --force`, `filter-branch`, `filter-repo`, `rebase` on a published branch, `add .` or `add -A` |
+
+Three notes, each of which cost something to learn:
+
+- **`add .` and `add -A` are red, not amber**, and the reason is not tidiness. They stage whatever
+  happens to be in the tree, so what gets committed is decided by what was lying around rather
+  than by anyone. It is the same defect as `>` on an existing file: an operation that looks
+  narrower than it is.
+- **`push --force-with-lease` is not `push --force`.** It aborts if the remote moved, which is the
+  property that makes it recoverable. Denying both pushes people towards the unsafe one.
+- **Amber still needs its own check.** `commit` that prints what it committed, `add` that prints
+  what is staged. Exit zero says `git` ran, not what it did.

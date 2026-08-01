@@ -1,6 +1,8 @@
 ---
 name: gtd-with-agents
 description: Set up and run the three-party working method for a project driven by Claude Code and Claude Cowork together — a file-based channel the two agents use to talk to each other, an explicit delegation contract that records what the person decides and what they hand over, and the verification culture that makes agreement between two agents worth anything. Use this whenever someone is starting a project with both Claude Code and Cowork, asks how the two should coordinate, says they are tired of copying questions from one session and pasting answers into the other, asks "who decides what here", "how do I stay informed without approving everything", "how much can I delegate", or wants to install a working agreement, an exchange channel, or an approval policy between agents. Also use when a session arrives cold at a project that already has this method installed and needs to pick it up.
+metadata:
+  version: 0.1.5
 ---
 
 # Get Things Done with Claude
@@ -68,7 +70,7 @@ Every activity is offered at three levels:
 | **DECIDE** | The person decides, every time, before anything happens |
 | **CONSENSUS** | The two agents agree, act, and tell them afterwards |
 | **DELEGATED** | The agents act and do not interrupt. It stays in the record |
-| **NOT APPLICABLE** | The project does not do that at all. **Offer it and mean it** — three of the eight activities have no honest answer on a thesis or a campaign. Write it as `NOT APPLICABLE — <reason>`, never bare |
+| **NOT APPLICABLE — `<reason>`** | The project does not do that at all. **Offer it and mean it** — three of the eight activities have no honest answer on a thesis or a campaign. Write it as `NOT APPLICABLE — <reason>`, never bare |
 
 **Present every option with its gain and its cost in the same sentence.** Not "recommended" —
 what they get and what they give up. A person choosing CONSENSUS for version control should read
@@ -100,7 +102,7 @@ document*. Pretending otherwise would make the floor the phantom control of its 
 So during setup, **put a real mechanism behind it wherever one exists, and record per class whether
 you did**:
 
-**`reference/floor-mechanism.md` is the procedure** — where the rules live, what to write, the four
+**`reference/floor-mechanism.md` is the procedure** — where the rules live, what to write, the five
 requests that test them, and what an ineffective rule looks like next to a working one. Read it
 here; do not improvise a syntax.
 
@@ -172,11 +174,20 @@ state/events frontier applied to the method's own installation.
 So during setup, **ask the person to confirm it is installed on the implementing side too**, and
 tell them where it goes. For Claude Code that is a skills directory on the filesystem:
 
-```sh
-mkdir -p ~/.claude/skills                        # all their projects
-unzip -q gtd-with-agents.skill -d ~/.claude/skills
+**Give them one of these two, not both.** They are alternatives, and a single fenced block
+holding both installs the skill twice — the "or" lives in a shell comment, which nothing reads.
 
-mkdir -p .claude/skills                          # or this project only, shared with the repo
+All their projects:
+
+```sh
+mkdir -p ~/.claude/skills
+unzip -q gtd-with-agents.skill -d ~/.claude/skills
+```
+
+Or this project only, shared with whoever has the repository:
+
+```sh
+mkdir -p .claude/skills
 unzip -q gtd-with-agents.skill -d .claude/skills
 ```
 
@@ -197,7 +208,7 @@ row per agent, dated. Then say out loud what that table is and is not:
 > Neither agent can see the other's session, so **it is a self-report with a date, not a
 > verification** — the same distinction `head: sha:` makes against `head: clock:`. Every session
 > compares its own row before doing anything else; agreeing is silent, and **disagreeing produces a
-> channel message, not an edit to the configuration.** Two agents correcting their own rows would
+> channel message with `state: open` and `to: owner`, not an edit to the configuration.** Two agents correcting their own rows would
 > give that file two writers, which is the shape `protocol.md` rejects for a shared status file —
 > so the state is derived here too: the table is what was set up, a later message is the fresher
 > fact, and the person folds it back in.
@@ -209,10 +220,30 @@ protocol is a missing document, not carelessness.
 
 **And capture the install itself.** An install is a verdict handed down from outside the project:
 it happens elsewhere, comes back as a yes or a no, and leaves nothing behind unless somebody
-catches it. Attempt it, paste back verbatim what the installer said, and record the path in the
-configuration — `never claim it installs without a path`, the same rule the floor already lives
-under. This is the one class of event the method had no procedure for, and it is the class that
-has actually failed.
+catches it. **Write the log before attempting, with the outcome blank**, so an attempt nobody
+finished looks unfinished rather than absent — the same shape the floor verification log has, and
+for the same reason:
+
+```sh
+mkdir -p .runs
+LOG=".runs/$(date -u +%Y%m%d-%H%M%S)-install.log"
+{
+  echo "=== install · $(date -u '+%F %T')Z ==="
+  echo "artefact: <what was installed, and which version>"
+  echo "target:   <where>"
+  echo "outcome:"
+} > "$LOG"
+echo "LOG: $LOG"
+```
+
+Then the person pastes what the installer said, **verbatim**, onto the `outcome:` line, and the
+path goes in the configuration. `never claim it installs without a path`, the same rule the floor
+already lives under.
+
+This rule was written after two bundles were refused, and **the repository that wrote it broke it
+within the hour** — the next install left no log, and the installer's exact words survive only in
+a code comment. That is the third reason in `verification.md` §12 happening to the file that
+publishes it, which is why the block above exists rather than a paragraph asking nicely.
 
 Tell them plainly what the method does *not* do, in your own words:
 

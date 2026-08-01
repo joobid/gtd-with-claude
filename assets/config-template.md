@@ -43,8 +43,13 @@ distinction `head: clock:` makes against `head: sha:` — a value with a date an
 from here.
 
 > **Every session compares its own side against its row before doing anything else.** Agreeing
-> costs nothing and produces nothing. **Disagreeing goes in the channel as a message, and the agent
-> does not edit this file.**
+> costs nothing and produces nothing. **Disagreeing goes in the channel as a message with
+> `state: open` and `to: owner`, and the agent does not edit this file.**
+
+Those two front-matter values are not decoration. Without them the correction is visible only in
+`ls -1 | tail -20` — that is, for the next twenty messages — and then it is invisible to every
+query this method documents. With them it shows up in the open-questions query until somebody
+resolves it, which is the whole point of writing it down.
 
 That last clause is deliberate and it was got wrong once. Letting each agent correct its own row
 would give this file **two writers**, which is exactly the shape `protocol.md` rejects for a shared
@@ -105,11 +110,17 @@ stated gets argued with later.
 
 | Class | Why | Mechanism |
 |---|---|---|
-| Real or personal data, privacy, rewriting history | Reverting does not undo it, and the failure is silent — a barrier that has stopped seeing something reports what a clean barrier reports | `<verified — path/to/log  /  attempted, not verified — path/to/log  /  none — agreement only>` |
-| Destructive actions with no inverse | Delegation assumes a mistake is recoverable. Archive instead of deleting and it leaves this class | `<...>` |
-| Spending money | The agents do not hold the mandate. The error leaves an account, not a file | `<...>` |
-| Anything reaching a third party | The person's name is on it, and it cannot be recalled by deciding it was a mistake | `<...>` |
+| Real or personal data, privacy, rewriting history | Reverting does not undo it, and the failure is silent — a barrier that has stopped seeing something reports what a clean barrier reports | `attempted, not verified — <path>` |
+| Destructive actions with no inverse | Delegation assumes a mistake is recoverable. Archive instead of deleting and it leaves this class | `attempted, not verified — <path>` |
+| Spending money | The agents do not hold the mandate. The error leaves an account, not a file | `none — agreement only` |
+| Anything reaching a third party | The person's name is on it, and it cannot be recalled by deciding it was a mistake | `none — agreement only` |
 
+> **The cells above are pre-filled at the honest default, and that is deliberate.** A blank or a
+> `<...>` reads exactly like a row nobody reached, so a floor that was never verified would be
+> indistinguishable from a floor nobody got to — which is the defect the verification log is
+> shaped to avoid, left in the table it certifies. Raise a row to `verified — <path>` when you
+> have watched it refuse; lower it to `none — agreement only` where no mechanism exists.
+>
 > **`attempted, not verified` is the honest default**, and it is where every row starts. A class
 > earns `verified` only once the *other-spelling* request has been seen to refuse too — a deny rule
 > matches the text of a command, not the operation, so two rows passing usually means the two
@@ -146,19 +157,26 @@ The criterion is verifiability, not difficulty. Delegation and verification are 
 | Where it is written | `<path>` |
 
 **"What has happened since yesterday?"** — pick one and adapt it, rather than inventing one per
-project, because an invented one is a command nobody has run:
+project, because an invented one is a command nobody has run.
+
+Note the `2*.md`: the channel carries its own `README.md` and `message-template.md`, so a bare
+`*.md` lists two documents as though they were messages, in every installation. And `set -o
+pipefail`, because `ls | head` reports the exit code of `head`, which is always zero — a block
+that cannot fail is a block that tells you nothing when it does.
 
 ```sh
+set -o pipefail
 git log --oneline --since=yesterday
-ls -1t .runs/exchange/*.md | head -20
-ls -1t .runs/*.log | head -5
+ls -1t .runs/exchange/2*.md | head -20
+ls -1t .runs/*.log 2>/dev/null | head -5 || echo "(no run logs yet)"
 ```
 
 Without a repository:
 
 ```sh
+set -o pipefail
 find . -newermt yesterday -type f -not -path './exchange/*' | head -30
-ls -1t exchange/*.md | head -20
+ls -1t exchange/2*.md | head -20
 ```
 
 **And in either case, what still needs the person.** Not a bare `grep`: because files are
