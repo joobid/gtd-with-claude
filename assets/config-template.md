@@ -31,7 +31,7 @@ Eight rows, one per thing the questionnaire asks about.
 
 | Activity | Level | Notes |
 |---|---|---|
-| Recording and publishing work — checkpoints, branches, merges | `<DECIDE / CONSENSUS / DELEGATED / NOT APPLICABLE>` | |
+| Recording and publishing work — checkpoints, branches, merges | `<DECIDE / CONSENSUS / DELEGATED / NOT APPLICABLE — reason>` | |
 | Approving a milestone's plan before it starts | `<...>` | |
 | Accepting a milestone's closure against its exit criteria | `<...>` | |
 | Changing scope once a milestone is running | `<...>` | |
@@ -44,9 +44,11 @@ Eight rows, one per thing the questionnaire asks about.
 **CONSENSUS** — the two agents agree, act, and report afterwards. One agent alone is not consensus,
 and in the channel that means `state: consensus` requires `re:` pointing at the other agent.
 **DELEGATED** — the agents act without interrupting. It stays in the record.
-**NOT APPLICABLE** — this project does not do that at all. **Say why in the Notes column**: a blank
-is indistinguishable from a question nobody answered, and this file is what gets re-read when the
-method drifts.
+**NOT APPLICABLE — `<reason>`** — this project does not do that at all, and **the reason is part
+of the value**, written on the same line. Not a note beside it: a bare `NOT APPLICABLE` is
+indistinguishable from a row nobody reached, and this file is what gets re-read when the method
+drifts. Where one group's answer does not fit all of its rows, the rows differ — that is expected,
+and the Notes column says which grouped answer they came from.
 
 ## The floor — not configurable, and honest about what enforces it
 
@@ -94,17 +96,28 @@ The criterion is verifiability, not difficulty. Delegation and verification are 
 project, because an invented one is a command nobody has run:
 
 ```sh
-# With a repository and a runs directory
 git log --oneline --since=yesterday
 ls -1t .runs/exchange/*.md | head -20
 ls -1t .runs/*.log | head -5
+```
 
-# Without a repository
+Without a repository:
+
+```sh
 find . -newermt yesterday -type f -not -path './exchange/*' | head -30
 ls -1t exchange/*.md | head -20
+```
 
-# In either case, what still needs the person
-grep -lE '^state: +escalated$' <channel>/*.md
+**And in either case, what still needs the person.** Not a bare `grep`: because files are
+immutable, a resolved escalation still says `state: escalated` for ever, so the bare form returns
+every escalation ever raised. The state is derived, so the query has to derive it.
+
+```sh
+cd <channel> || exit 1
+closed=$(grep -lE '^from: +owner$' *.md | xargs -r grep -hE '^re: +' | awk '{print $2}' | sort -u)
+for f in $(grep -lE '^state: +escalated$' *.md); do
+  echo "$closed" | grep -qx "$(basename "$f")" || echo "$f"
+done
 ```
 
 > **Verify it with a probe, not by running it once.** At setup the channel is empty and the project

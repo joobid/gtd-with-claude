@@ -69,19 +69,20 @@ asked*.
 
 ```sh
 # Open questions: state: open, minus anything a later message answers.
-answered=$(grep -hE '^re:' *.md | awk '{print $2}' | grep -v '^-$' | sort -u)
+answered=$(grep -hE '^re: +' *.md | awk '{print $2}' | grep -v '^-$' | sort -u)
 for f in $(grep -lE '^state: +open$' *.md); do
   echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
 done
 
 # What the person needs to look at: escalations nothing has closed.
-closed=$(grep -lE '^from: +owner' *.md | xargs -r grep -hE '^re:' | awk '{print $2}' | sort -u)
+closed=$(grep -lE '^from: +owner$' *.md | xargs -r grep -hE '^re: +' | awk '{print $2}' | sort -u)
 for f in $(grep -lE '^state: +escalated$' *.md); do
   echo "$closed" | grep -qx "$(basename "$f")" || echo "$f"
 done
 
-grep -lE '^from: +owner' *.md      # every decision the person has made
-ls -1 | tail -20                 # the last twenty messages, in order
+grep -lE '^from: +owner$' *.md     # every decision the person has made
+
+ls -1 | tail -20                   # the last twenty messages, in order
 ```
 
 An escalation is closed by a message `from: owner` whose `re:` points at it.

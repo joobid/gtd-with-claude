@@ -22,7 +22,7 @@ Everything else is the body: prose, commands, output, whatever the message needs
 
 **The `<author>` in the filename is whoever typed the file** — the session that wrote it. It can
 differ from `from:`, which is the person for a recorded decision. That way `ls -1` stays readable
-by session while `grep -E '^from: +owner'` stays readable by decision.
+by session while `grep -E '^from: +owner$'` stays readable by decision.
 
 ---
 
@@ -202,7 +202,7 @@ decide it. Worth knowing when it comes round again.
 Five things about that shape:
 
 - **`from: owner`**, whoever typed the file. The information originates with the person, and
-  `grep -E '^from: +owner'` then returns every decision they have made in one list.
+  `grep -E '^from: +owner$'` then returns every decision they have made in one list.
 - **`to: both`.** An owner decision binds both agents, including the one that wrote it down —
   `to: cowork` would formally excuse the author from ever re-reading it.
 - **The first line names the agent that recorded it, how, and that it was shown back.** Whether it
@@ -272,7 +272,7 @@ conversation is derived, so the query has to do the derivation.
 
 ```sh
 # Open questions: state: open, minus anything a later message answers.
-answered=$(grep -hE '^re:' *.md | awk '{print $2}' | grep -v '^-$' | sort -u)
+answered=$(grep -hE '^re: +' *.md | awk '{print $2}' | grep -v '^-$' | sort -u)
 for f in $(grep -lE '^state: +open$' *.md); do
   echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
 done
@@ -280,15 +280,16 @@ done
 
 ```sh
 # What the person needs to look at: escalations nothing has closed.
-closed=$(grep -lE '^from: +owner' *.md | xargs -r grep -hE '^re:' | awk '{print $2}' | sort -u)
+closed=$(grep -lE '^from: +owner$' *.md | xargs -r grep -hE '^re: +' | awk '{print $2}' | sort -u)
 for f in $(grep -lE '^state: +escalated$' *.md); do
   echo "$closed" | grep -qx "$(basename "$f")" || echo "$f"
 done
 ```
 
 ```sh
-grep -lE '^from: +owner' *.md      # every decision the person has made
-ls -1 | tail -20                 # the last twenty messages, in order
+grep -lE '^from: +owner$' *.md     # every decision the person has made
+
+ls -1 | tail -20                   # the last twenty messages, in order
 ```
 
 **How an escalation is closed:** a message `from: owner` whose `re:` points at it. That makes

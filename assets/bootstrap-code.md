@@ -43,7 +43,7 @@ READ WHAT THE PERSON HAS ALREADY DECIDED before proposing anything, including wh
 in the OTHER session. Both agents record their exchanges with the person, so a choice made in a
 Cowork conversation is not invisible to you:
 
-    grep -lE '^from: +owner' <channel>/*.md
+    grep -lE '^from: +owner$' <channel>/*.md
 
 Those are decisions, not opinions. If one rules out what you were about to do, it is settled --
 and if you think it rested on a wrong premise, that is a message with the fact, not a redo.

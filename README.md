@@ -162,7 +162,7 @@ the ones an implementing session will walk into blind.
 Filing them under your name is what makes every decision you have made findable in one line:
 
 ```
-grep -lE '^from: +owner' .runs/exchange/*.md
+grep -lE '^from: +owner$' .runs/exchange/*.md
 ```
 
 It applies to more than approvals: a preference, a constraint, a correction, a fact about your
@@ -189,6 +189,7 @@ over. Three levels:
 | **DECIDE** | You decide, every time, before anything happens |
 | **CONSENSUS** | The two agents agree, act, and tell you afterwards |
 | **DELEGATED** | They act and do not interrupt. It stays in the record |
+| **NOT APPLICABLE** | Your project does not do that at all — and the reason is written down, because a blank looks like a question nobody reached |
 
 Every option is presented with its gain **and its cost in the same sentence**, because an option
 without its cost is a default with a label on it:
@@ -393,6 +394,7 @@ reference/
   roles.md               the three parts and the state/events frontier
   approvals.md           the questionnaire, the traffic-light triage, the floor
   verification.md        why agreement between two agents is worth anything
+  floor-mechanism.md     how to put a real mechanism behind the floor, and prove it refuses
   git-annex.md           only what depends on having a repository
 assets/
   exchange-README.md     copied into the channel
@@ -401,12 +403,20 @@ assets/
   bootstrap-cowork.md    startup prompt for a cold Cowork session
   config-template.md     where the chosen configuration is written
 scripts/
-  validate_skill.py      what the release pipeline runs, and what proves itself
+  validate_skill.py      checks the bundle's shape, and proves itself by failing on purpose
+  check_doc_commands.py  runs the documented queries against a fixture with a known answer
 .github/workflows/
   release.yml            builds and checks the bundle on a version tag
 ```
 
-The core needs no repository. `git-annex.md` is the only file that assumes one.
+**The core assumes nothing about your setup, and two files break that on purpose.** They are the
+annexes, and they are marked as such inside:
+
+- `git-annex.md` — everything that needs a repository
+- `floor-mechanism.md` — its four-step procedure is tool-agnostic; the second half is a worked
+  example in one specific tool, under a heading that says so
+
+Everything else works on a thesis, a research project or a campaign as readily as on a codebase.
 
 ### Releases
 

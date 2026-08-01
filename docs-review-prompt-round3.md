@@ -21,38 +21,74 @@ donde aparecen los defectos nuevos:
 
     UN BLOQUE DE COMANDOS EN LA DOCUMENTACION ES UNA AFIRMACION, Y SE EJECUTA.
 
-Hay un scripts/check_doc_commands.py que lo intenta. NO TE FIES DE EL: es de hace
-media hora, lo escribio la misma sesion que escribio los comandos que debe
-comprobar, y ya se sabe que su comparacion es tosca. Es el primer objetivo.
+Hay un scripts/check_doc_commands.py que lo intenta. NO TE FIES DE EL: lo escribio
+la misma sesion que escribio los comandos que debe comprobar, y ya se sabe que su
+comparacion es tosca. Es el primer objetivo.
+
+Y hay un hecho nuevo que las dos rondas anteriores no tuvieron: EL REPOSITORIO
+EXISTE, TIENE UN TAG v0.1, Y EL PIPELINE DE RELEASE SE HA EJECUTADO DE VERDAD.
+Fallo. Abajo esta su salida literal.
 
   ~/claude/gtd-with-claude   SOLO LECTURA, salvo tu informe
   /tmp/gtd-qa3-<fecha>/      tuyo
   Informe: ~/claude/gtd-with-claude/docs-review-findings-r3.md
 
 ═══════════════════════════════════════════════════════════════════════
+0 · LA EVIDENCIA QUE YA HAY, Y QUE NADIE HA INTERPRETADO
+═══════════════════════════════════════════════════════════════════════
+
+Run 30708254775, 18 segundos, paso "The documented commands do what they claim":
+
+    FAIL assets/exchange-README.md:70 returned 18, the fixture has 3 open
+        ['20260801-100000-cowork-q1.md', '20260801-100100-cowork-q2.md',
+         '20260801-100200-code-q3.md', '20260801-100500-code-esc-live.md']
+    FAIL reference/protocol.md:289 returned 14, the fixture has 2 owner
+        ['20260801-100700-cowork-decision.md', '20260801-100800-code-decision.md',
+         '20260801-100000-cowork-q1.md', '20260801-100100-cowork-q2.md']
+    FAIL assets/config-template.md:96 returned 17, the fixture has 1 escalated
+        ['./message-template.md', './20260801-100200-code-q3.md',
+         './20260801-100800-code-decision.md', './20260801-100700-cowork-decision.md']
+
+    EXAMINED: 5 command blocks over 8 documents, against a 10-message fixture
+      ok   notices an extra owner message
+
+Tres cosas de ahi, y quiero tu lectura de las tres, no la mia:
+
+  - El self-test salio VERDE y la comprobacion real ROJA. O el instrumento
+    funciona y la documentacion esta mal, o el self-test prueba algo que no es
+    lo que falla. Decide cual
+  - Los ficheros devueltos NO CUADRAN con la etiqueta. El primero devuelve una
+    escalacion contando "abiertas"; el tercero devuelve message-template.md, que
+    es el instrumento, contando "escaladas"
+  - Corriendo en local, el tercero devolvia 18 y config-template.md estaba en la
+    linea 88, no en la 96. LAS CIFRAS NO SON ESTABLES ENTRE ENTORNOS. Averigua
+    por que: si un comprobador da numeros distintos segun donde corra, ninguno
+    de los dos numeros significa nada todavia
+
+═══════════════════════════════════════════════════════════════════════
 1 · EL COMPROBADOR DE PROSA, QUE ES EL SOSPECHOSO PRINCIPAL
 ═══════════════════════════════════════════════════════════════════════
 
-scripts/check_doc_commands.py extrae los bloques ```sh de la documentacion, los
-ejecuta contra un canal de prueba de 10 mensajes con verdad conocida, y compara.
-Hoy sale en ROJO con tres discrepancias, y no esta claro cuantas son defectos de
-la documentacion y cuantas defectos del comprobador.
-
   a) EJECUTALO Y DECIDE, discrepancia por discrepancia, cual de las dos partes
      esta mal. Es la pregunta que la sesion que lo escribio no puede contestar
-     sobre si misma.
+     sobre si misma
   b) SU HEURISTICA: mapea un bloque entero a UNA expectativa mirando si el texto
      contiene "open", "escalated" u "owner". Un bloque con tres consultas cuenta
      todas sus lineas contra una sola cifra. ¿Cuanto de lo que reporta es eso?
+     Y si es todo: el comprobador no ha encontrado ningun defecto de la
+     documentacion todavia, y decirlo asi es parte del hallazgo
   c) ROMPELO A PROPOSITO: mete un comando roto en un documento y mira si lo caza.
      Mete uno correcto que el no sepa clasificar y mira si lo llama defecto.
-     Un comprobador que solo se ha visto fallar de una manera no esta probado.
+     Un comprobador que solo se ha visto fallar de una manera no esta probado
   d) SU AMBITO: declara "5 bloques sobre 8 documentos". ¿Cuantos bloques ```sh
      hay de verdad en el arbol? Si mira menos de los que hay, es la forma exacta
      -- ambito declarado que nadie juzga -- que las dos rondas anteriores
-     encontraron tres veces.
+     encontraron tres veces
   e) Y LA PREGUNTA DE FONDO: ¿es este el instrumento correcto, o solo el primero
      que se le ocurrio a quien tenia el problema delante?
+
+  NO LO ARREGLES HASTA HABER CONTESTADO (a). Un comprobador que su autor ajusta
+  hasta que sale verde no vale nada, y aqui el autor es la sesion anterior.
 
 ═══════════════════════════════════════════════════════════════════════
 2 · LO QUE LA RONDA 2 ARREGLO, COMPROBADO Y NO PREGUNTADO
@@ -80,9 +116,9 @@ de lo suyo:
 3 · LO QUE SIGUE ABIERTO, Y ES DECISION DE UNA PERSONA
 ═══════════════════════════════════════════════════════════════════════
 
-R2-06 Y R2-11 SE HAN CERRADO ESTA MAÑANA, y quiero que ataques los cierres --
-no que compruebes que existen. Un arreglo reciente escrito por la misma sesion
-que causo el defecto es el sospechoso natural, y las dos rondas anteriores
+R2-06 Y R2-11 SE CERRARON AYER, y quiero que ataques los cierres -- no que
+compruebes que existen. Un arreglo reciente escrito por la misma sesion que
+causo el defecto es el sospechoso natural, y las dos rondas anteriores
 encontraron que CADA arreglo metio un defecto nuevo en otro fichero.
 
   R2-06 · hay un reference/floor-mechanism.md NUEVO con el procedimiento: donde
@@ -98,7 +134,7 @@ encontraron que CADA arreglo metio un defecto nuevo en otro fichero.
           Y la de fondo: un procedimiento escrito y nunca ejecutado es
           exactamente lo que la ronda 2 encontro seis veces.
 
-  R2-11 · se ha anadido NOT APPLICABLE como cuarto valor, con la obligacion de
+  R2-11 · se anadio NOT APPLICABLE como cuarto valor, con la obligacion de
           escribir el motivo.
 
           ATACALO: la ronda 2 critico el vocabulario de estados por sobrecargado
@@ -117,32 +153,33 @@ NOT APPLICABLE ahora son mas. Dime si eso lo empeora.
 
 Cuatro sospechas mias, suelo y no guion. Si alguna no es problema, dimelo:
 
-  a) SE HAN AÑADIDO DOS SCRIPTS Y CERO PRUEBAS DE QUE EL PIPELINE LOS EJECUTE.
-     ¿Corre check_doc_commands.py en release.yml? Si no, es un comprobador que
-     nadie lanza -- peor que no tenerlo, porque su existencia tranquiliza
-  b) EL ARBOL DEBERIA SER YA UN REPOSITORIO CON UN TAG. Si lo es, EJECUTA lo
-     que puedas del pipeline de verdad en vez de reproducirlo -- es la
-     diferencia entre evidencia y reconstruccion, y las dos rondas anteriores
-     solo pudieron reconstruir. Si NO lo es, dilo: seria la tercera ronda con
-     la misma laguna, y en algun momento deja de ser laguna y pasa a ser una
-     afirmacion que el repositorio no puede sostener.
+  a) EL PIPELINE CORRIO Y PARO EN EL SEXTO PASO. Los pasos POSTERIORES -- montar
+     desde MANIFEST, empaquetar, validar el bundle extraido, publicar -- NUNCA
+     SE HAN EJECUTADO. Ni una vez, ni aqui ni en las dos rondas anteriores.
+     Todo lo que el repositorio afirma sobre el empaquetado sigue siendo
+     reconstruccion. Reproducelos a mano si puedes y di que encuentras
+  b) EJECUTA LO QUE PUEDAS DEL PIPELINE DE VERDAD en vez de reproducirlo -- es
+     la diferencia entre evidencia y reconstruccion. Hay tag, hay remoto, hay
+     historial de runs. Lo que no puedas ejecutar, dilo como no ejecutado
   c) DOS RONDAS DE ARREGLOS Y NADIE HA VUELTO A LEER EL METODO ENTERO DE
      PRINCIPIO A FIN. Los parches son locales; la coherencia es global. ¿Sigue
      diciendo lo mismo README.md, SKILL.md y reference/ sobre las mismas cosas?
-  d) LA SKILL SIGUE SIN INSTALARSE NUNCA de verdad. La ronda 2 lo midio con un
-     proxy y lo declaro como tal. ¿Puedes hacer mejor, o hay que aceptar que
-     esa casilla solo la cierra una persona?
+  d) LA SKILL SIGUE SIN INSTALARSE NUNCA de verdad, y ahora ademas NO HAY BUNDLE
+     PUBLICADO porque el release fallo. La ronda 2 lo midio con un proxy y lo
+     declaro como tal. ¿Puedes hacer mejor, o hay que aceptar que esa casilla
+     solo la cierra una persona?
 
 ═══════════════════════════════════════════════════════════════════════
 COMO QUIERO EL INFORME
 ═══════════════════════════════════════════════════════════════════════
 
   1. QA primero: prueba, esperado, obtenido, PASA/FALLA, con la salida real
-  2. Que hallazgos de r1 y r2 siguen abiertos, comprobado
-  3. Los nuevos, con fichero y linea, por coste
-  4. DEFECTO / LAGUNA / DECISION SIN TOMAR
-  5. Lo que NO arreglarias
-  6. La pregunta que el documento no se hace
+  2. Las tres discrepancias del run, una a una: ¿documentacion o comprobador?
+  3. Que hallazgos de r1 y r2 siguen abiertos, comprobado
+  4. Los nuevos, con fichero y linea, por coste
+  5. DEFECTO / LAGUNA / DECISION SIN TOMAR
+  6. Lo que NO arreglarias
+  7. La pregunta que el documento no se hace
 
 Declara al principio que examinaste y que no, incluido lo que intentaste y no
 pudiste. "No me consta" es un resultado; "no funciona" sobre algo no ejecutado,

@@ -59,11 +59,25 @@ def read_manifest(path: Path) -> list[str]:
     ]
 
 
-def validate(root: Path, manifest: list[str] | None = None) -> tuple[bool, str, dict]:
+# Directories that exist around a skill and are not part of one. Counting them inflates
+# the declared scope with objects no rule ever looks at.
+NOT_OURS = {".git", ".runs", "__pycache__", "build", "verify"}
+
+
+def validate(root: Path, manifest: list[str] | None = None,
+             exact: bool = False) -> tuple[bool, str, dict]:
     """Return (ok, message, what_was_examined)."""
     seen = {"files": 0, "rules": 0, "skill_md": 0, "manifest": len(manifest or [])}
 
-    files = [p for p in root.rglob("*") if p.is_file()]
+    # R3-16: `.git` used to be counted, so validating the repository root declared
+    # "12 rules over 86 files" while examining the same 14 it always had. A declared
+    # scope whose number is dominated by objects nobody validates has stopped meaning
+    # what it says, which is the defect this whole file is written against.
+    #
+    # `.runs` is excluded for a second and stronger reason: it is raw, unsanitised
+    # output by design, and the rule about it is that nothing scans it.
+    files = [p for p in root.rglob("*")
+             if p.is_file() and not (NOT_OURS & set(p.relative_to(root).parts))]
     seen["files"] = len(files)
 
     # An empty scope is not a pass. If the directory is empty something went wrong
@@ -85,6 +99,32 @@ def validate(root: Path, manifest: list[str] | None = None) -> tuple[bool, str, 
                 f"BLIND: {len(missing)} of {len(manifest)} manifest paths are absent from {root}.\n"
                 "  This is not a frontmatter problem and not a pass -- the bundle is incomplete:\n"
                 + "\n".join(f"     missing  {m}" for m in missing),
+                seen,
+            )
+
+        # And the other direction, which was missing and cost a real defect.
+        #
+        # MANIFEST is checked both ways against the TREE, by the pipeline. Against the
+        # BUNDLE it was checked one way only: everything listed is present. Nothing asked
+        # whether anything present was unlisted -- so a bundle with an extra file passed.
+        #
+        # Found by executing the release steps rather than reading them: `zip -qr out.skill
+        # dir` UPDATES an existing archive instead of replacing it, so a stale README.md
+        # from an earlier build survived into a freshly staged bundle and this validator
+        # said VALID over 14 files against 13 manifest paths. It printed both numbers.
+        # Nothing compared them, which is this file's own §1 defect committed by this file.
+        # Only for a bundle (--exact). The source tree legitimately holds README.md,
+        # scripts/, workflows and review artefacts, none of which ship.
+        listed = set(manifest)
+        extra = sorted(str(p.relative_to(root)) for p in files
+                       if str(p.relative_to(root)) not in listed) if exact else []
+        if extra:
+            return (
+                False,
+                f"BLIND: {len(extra)} file(s) in {root} are not in the manifest.\n"
+                "  A bundle is exactly what the manifest says or the manifest is not the\n"
+                "  single source of truth. Add them, or find out what put them there:\n"
+                + "\n".join(f"     unlisted  {m}" for m in extra),
                 seen,
             )
 
@@ -252,6 +292,23 @@ def self_test(root: Path, manifest: list[str] | None = None) -> bool:
             print(f"  {'ok  ' if caught else 'FAIL'} rejects: {label}{detail}")
             all_ok &= caught
 
+    # The --exact rule needs a bundle-shaped tree, so it cannot be one of the mutations
+    # above, which copy the source tree. Both polarities, because this rule was added
+    # after a stale file survived into a bundle under a fully green pipeline.
+    if manifest:
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = Path(tmp) / "bundle"
+            for m in manifest:
+                (bundle / m).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy(root / m, bundle / m)
+            clean, _, _ = validate(bundle, manifest, exact=True)
+            print(f"  {'ok  ' if clean else 'FAIL'} accepts: a bundle of exactly the manifest")
+            (bundle / "stale.md").write_text("left over from an earlier build\n", encoding="utf-8")
+            dirty, _, _ = validate(bundle, manifest, exact=True)
+            print(f"  {'ok  ' if not dirty else 'FAIL'} rejects: a bundle carrying a file "
+                  f"the manifest does not list")
+            all_ok &= clean and not dirty
+
     # And the polarity nobody runs: the untouched skill must still pass. A checker only
     # ever tested on broken input has not been shown to accept anything.
     ok, _, _ = validate(root, manifest)
@@ -276,7 +333,17 @@ def main() -> int:
     # found by default, and its absence is BLIND rather than a pass.
     manifest = None
     if "--no-manifest" not in sys.argv and "--manifest" not in sys.argv:
-        for cand in (root / "MANIFEST", Path.cwd() / "MANIFEST", root.parent / "MANIFEST"):
+        # R3-14: the search used to include Path.cwd() and root.parent, so the same bundle
+        # got a different verdict depending on where the shell was standing -- a manifest
+        # planted in an unrelated directory was adopted as the contract for a target that
+        # had none. A bundle's contract belongs beside the bundle. The one convenience
+        # worth keeping is running this from the repository root, and that is resolved
+        # from THIS FILE's location, which does not move when the user does.
+        home = Path(__file__).resolve().parent.parent
+        cands = [root / "MANIFEST"]
+        if root.resolve().is_relative_to(home):      # only for a target inside this repo
+            cands.append(home / "MANIFEST")
+        for cand in cands:
             if cand.is_file():
                 manifest = read_manifest(cand)
                 print(f"(manifest found at {cand})")
@@ -296,12 +363,16 @@ def main() -> int:
     if "--self-test" in sys.argv:
         return 0 if self_test(root, manifest) else 1
 
-    ok, report, seen = validate(root, manifest)
+    # --exact: the bundle must be EXACTLY the manifest, nothing more. Only meaningful on
+    # an extracted bundle; a source tree legitimately holds files that do not ship.
+    exact = "--exact" in sys.argv
+    ok, report, seen = validate(root, manifest, exact=exact)
     print(report)
     print(
         f"\nEXAMINED: {seen['rules']} rules over {seen['files']} files "
         f"({seen['skill_md']} shipping SKILL.md"
         + (f", {seen['manifest']} manifest paths" if manifest else ", no manifest given")
+        + (", exact" if exact else ", extra files not judged")
         + ")"
     )
     print("VALID" if ok else "INVALID")

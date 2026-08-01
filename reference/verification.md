@@ -208,6 +208,41 @@ This is the general shape of every guardrail migration, and it is silent by cons
 you widen a check, **re-apply it to its own existing record in the same change**, and say that
 you did.
 
+## 11 · When this check passes, what else would have made it pass?
+
+Section 2 asks whether a verifier has been seen to fail. That is necessary and nowhere near
+sufficient, because **a check can have been seen to fail once and still pass for a dozen reasons
+unrelated to the property it claims to establish.** Failing is not the way checks usually let
+things through. Being satisfiable another way is.
+
+So, alongside *break it on purpose*, a second habit that costs one sentence:
+
+> **When you write a check, write down the cheapest wrong thing that would also pass it.**
+
+Writing that sentence is what produces the fix, every time:
+
+| The check | The cheapest wrong thing that also passes | So you |
+|---|---|---|
+| A count matches the expected number | A different set with the same total | Compare **sets**, not totals |
+| A certification points at a log file | An empty file | Put the outcomes **in** the log, and check for blanks |
+| A test suite of deny rules refuses twice | A machine where the two spellings you thought of are the two you tested | Test **a spelling you did not write the rule for** |
+| A prompt appears where you expected one | A machine with nothing configured, which prompts anyway | **Plant** the permission first, then confirm the prompt still wins |
+| A self-test reports the mutation was noticed | Anything else failing at the same time | Compare the finding **sets** before and after |
+| A validator declares *N rules over M files* | An `M` dominated by objects nobody validates | Exclude them, or the declaration has stopped meaning what it says |
+
+Every row of that table is a real defect from this repository's own history, and they are one
+shape six times: **the passing condition was much weaker than the claim it certified.**
+
+### The stronger version, where a fixture exists
+
+If a check runs against fixture data with a known answer, you can measure distinctiveness instead
+of reasoning about it: **mutate the fixture, not just the checker.** Change one record's state,
+remove a link, add an entry — and require that each mutation changes at least one reported result.
+
+A check that reports the same thing under data that no longer means the same thing is passing for
+a reason unrelated to what it claims. That is measurable rather than merely suspected, and it is
+the difference between a check you trust and a check you hope about.
+
 ---
 
 ## Every command block leaves a record

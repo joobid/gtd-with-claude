@@ -32,11 +32,22 @@ FIRST ACTION: measure the state and present it before proposing anything. What i
 the checks return, what the last messages in the channel say, and which of them are still open:
 
   ls -1 <channel> | tail -20
-  grep -lE '^from: +owner' <channel>/*.md
+  grep -lE '^from: +owner$' <channel>/*.md
 
-For what is still OPEN, a bare grep is wrong and the README has the real queries: files are
-immutable, so an answered message says state: open for ever and the bare grep returns EVERY
-question ever asked. The queries in <channel>/README.md subtract what a later message answers.
+AND THIS ONE, WHICH IS THE OBJECTIVE THE METHOD PROMISES: what is escalated and still waiting on
+the person. Nothing else in this prompt surfaces it, and an escalation nobody looks at is the one
+failure this whole method exists to prevent.
+
+  cd <channel> || exit 1
+  closed=$(grep -lE '^from: +owner$' *.md | xargs -r grep -hE '^re: +' | awk '{print $2}' | sort -u)
+  for f in $(grep -lE '^state: +escalated$' *.md); do
+    echo "$closed" | grep -qx "$(basename "$f")" || echo "$f"
+  done
+
+A BARE grep FOR EITHER STATE IS WRONG, and that is why both of these derive: files are immutable,
+so an answered question says state: open for ever and a resolved escalation says state: escalated
+for ever. The bare form returns every one ever raised. <channel>/README.md has the same queries
+for open questions, subtracting whatever a later message answers.
 
 READ WHAT THE PERSON HAS ALREADY DECIDED before proposing anything -- including what they
 decided in the OTHER session. Both agents record their exchanges with the person, so a choice

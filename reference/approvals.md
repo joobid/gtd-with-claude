@@ -14,7 +14,7 @@ and the **traffic-light triage**, used every day for individual commands.
 | **DECIDE** | The person decides, every time, **before** anything happens |
 | **CONSENSUS** | The two agents agree, act, and tell them afterwards |
 | **DELEGATED** | The agents act and do not interrupt. It stays in the record |
-| **NOT APPLICABLE** | This project does not do that at all — and the agent says **why**, in writing |
+| **NOT APPLICABLE — `<reason>`** | This project does not do that at all. **The reason is part of the value, not a note beside it**: written as one string, an empty reason is a malformed answer rather than a missing annotation, and `NOT APPLICABLE` on its own is indistinguishable from a row nobody reached |
 
 CONSENSUS is not a weak DECIDE. It means the two agents have to *exchange and agree* — a single
 agent acting alone is not consensus, and if they cannot agree it becomes `escalated`.
@@ -24,17 +24,136 @@ agent acting alone is not consensus, and if they cannot agree it becomes `escala
 **Every option is presented with what it gains and what it costs, in the same sentence.**
 
 Not "recommended". A person who cannot see the cost has not chosen — they have accepted a
-default with a label on it. The tone to aim for:
+default with a label on it.
 
-> **CONSENSUS — gain:** you stop approving twenty commits a day.
-> **cost:** you find out the shape of the history after it is written.
+**The wordings are below, all twenty-four of them, and they are written out rather than left to
+the agent on purpose.** A rule that says *"present the cost"* with three examples is a rule the
+agent extends by improvising, and improvised costs come out generic — *"less control"* — which is
+a label, not a cost. Use these, or better ones for the specific project; do not invent them at
+the moment of asking.
 
-> **DELEGATED — gain:** dependency installs stop interrupting you.
-> **cost:** your environment can change under you, and you will read about it rather than decide
-> it.
+---
 
-> **DECIDE — gain:** nothing goes out with your name on it that you have not read.
-> **cost:** you are in the loop for every one of them, including the trivial ones.
+### Group 1 · Recording and publishing work — checkpoints, branches, merges
+
+> **DECIDE — gain:** nothing enters the history without you having read it, and the shape of the
+> record stays yours. **cost:** you are in the loop for every checkpoint, including the twenty
+> trivial ones an ordinary working day produces.
+
+> **CONSENSUS — gain:** you stop approving twenty commits a day, and each one still had to
+> satisfy a second agent. **cost:** you learn the shape of the history after it is written, and a
+> bad structure is cheapest to fix before it exists.
+
+> **DELEGATED — gain:** the single highest-frequency interruption disappears completely.
+> **cost:** this is the one activity here that can reach other people — publishing to a shared
+> remote is on the floor regardless of what you choose, so delegating this delegates everything
+> up to that line and not past it.
+
+### Group 2 · The shape of the work
+
+**Approving a milestone's plan before it starts**
+
+> **DECIDE — gain:** you see the work before it is done, which is the only moment when changing
+> direction is free. **cost:** a milestone cannot start while you are unavailable, and planning
+> arrives in bursts rather than evenly.
+
+> **CONSENSUS — gain:** a plan that survived a reviewing agent starts without waiting for you.
+> **cost:** you find out the milestone's shape from its first report, and by then a week of work
+> already assumes it.
+
+> **DELEGATED — gain:** nothing waits for you at the beginning of anything. **cost:** the plan is
+> where scope is actually decided, so this delegates more than its name suggests.
+
+**Accepting a milestone's closure against its exit criteria**
+
+> **DECIDE — gain:** nothing is called done without you having seen the evidence, which is where
+> "done" usually stops meaning anything. **cost:** you become the bottleneck at the end of every
+> milestone, which is the moment momentum matters most.
+
+> **CONSENSUS — gain:** closure requires both agents to agree the criteria were met, so only
+> genuine disagreement reaches you instead of every closure. **cost:** the criteria have to be
+> written well enough for two agents to judge them, and a vague criterion will be marked met.
+
+> **DELEGATED — gain:** milestones close without you. **cost:** exit criteria are the only place
+> this method checks its own work, so this removes the check rather than moving it.
+
+**Changing scope once a milestone is running**
+
+> **DECIDE — gain:** scope cannot grow while you are not looking, which is the most common way a
+> plan quietly stops matching reality. **cost:** mid-flight discoveries wait for you, and a
+> blocked agent does nothing else in the meantime.
+
+> **CONSENSUS — gain:** a change both agents think is necessary happens immediately, with the
+> reason on the record. **cost:** you learn what the milestone became rather than deciding it,
+> and small agreed changes compound into a different milestone.
+
+> **DELEGATED — gain:** nothing ever stalls mid-milestone. **cost:** this is the setting that
+> quietly devalues the other two — a plan you approved can become a different plan without any
+> decision being taken.
+
+### Group 3 · The environment
+
+**Installing dependencies**
+
+> **DECIDE — gain:** nothing enters the project that you have not chosen to depend on.
+> **cost:** you approve installs that are obvious, and the interruption lands at the least
+> interesting possible moment.
+
+> **CONSENSUS — gain:** a dependency both agents think is necessary gets added, with the reason
+> recorded. **cost:** your dependency list grows by agreement rather than by decision, and
+> removing one later costs more than not adding it.
+
+> **DELEGATED — gain:** dependency installs stop interrupting you entirely. **cost:** your
+> environment changes under you, and you read about it rather than decide it.
+
+**Changing environment configuration**
+
+> **DECIDE — gain:** the environment stays what you believe it is, which is what makes *"it works
+> on my machine"* a diagnosable sentence. **cost:** you get consulted about settings you have no
+> opinion about.
+
+> **CONSENSUS — gain:** the agents unblock themselves without a round trip through you.
+> **cost:** configuration drift is cumulative and invisible, and the record becomes the only
+> place it can be seen at all.
+
+> **DELEGATED — gain:** no interruption for environment work, ever. **cost:** when something
+> eventually breaks, the gap between the environment you designed and the one you have is
+> something you now have to reconstruct.
+
+**Editing the permission configuration of the tools themselves**
+
+> **DECIDE — gain:** the limits stay yours, and an agent that cannot widen its own permissions
+> has limits rather than preferences. **cost:** the rare occasion it is genuinely needed becomes
+> a round trip.
+
+> **CONSENSUS — gain:** the agents can adjust a limit when both agree it is blocking real work.
+> **cost:** the two parties agreeing are the two parties the limits restrict — the one place in
+> this whole questionnaire where agreement is not independent of the outcome.
+
+> **DELEGATED — gain:** permissions never interrupt you again. **cost:** every other row on this
+> page becomes advisory, because any level you set can be widened by the thing it restricts.
+
+### Group 4 · Design choices where the agents agree
+
+> **DECIDE — gain:** you keep the decisions that shape what the thing becomes, which are exactly
+> the ones nobody can reconstruct from the result afterwards. **cost:** you arbitrate choices
+> where both agents already agree, which is most of them.
+
+> **CONSENSUS — gain:** two agents converging is enough to move, and only real disagreement
+> reaches you. **cost:** worth precisely what the verification culture is worth — two agents
+> agreeing about something no check can evaluate is two opinions, not evidence.
+
+> **DELEGATED — gain:** design decisions never wait for anybody. **cost:** the same as consensus
+> without even the requirement that both agents looked; this is the level most often chosen for
+> the wrong reason, which is speed.
+
+### Group 5 · Reporting rhythm
+
+Not a delegation level — a frequency and a depth — so it has no three wordings. It has one cost,
+and it is the same whichever they pick: **whatever they choose has to produce a command that
+returns something.** See "The counterweight".
+
+---
 
 ### The activities
 
@@ -44,6 +163,12 @@ dependencies, changing the environment — have no honest answer on a thesis, a 
 a campaign. Recording a delegation level for something that will never happen is worse than a
 blank, because the configuration is what gets re-read when the method drifts. The agent offers the
 value and writes the reason.
+
+**A group can be answered per group or per row, and the agent has to know which it is doing.**
+Group 3 holds three activities, and on a thesis project the first two do not apply while the
+third does — so a single grouped answer of NOT APPLICABLE would be wrong for one of the rows.
+Ask the group, then **write the eight rows individually**, and where a grouped answer does not
+fit all its rows, split it and say so in the same turn rather than picking one.
 
 Eight activities, grouped into **five questions** so the questionnaire is answerable in one
 sitting. Counted as the configuration file records them — one row per thing the person answers,

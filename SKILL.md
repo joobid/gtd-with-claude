@@ -68,6 +68,7 @@ Every activity is offered at three levels:
 | **DECIDE** | The person decides, every time, before anything happens |
 | **CONSENSUS** | The two agents agree, act, and tell them afterwards |
 | **DELEGATED** | The agents act and do not interrupt. It stays in the record |
+| **NOT APPLICABLE** | The project does not do that at all. **Offer it and mean it** — three of the eight activities have no honest answer on a thesis or a campaign. Write it as `NOT APPLICABLE — <reason>`, never bare |
 
 **Present every option with its gain and its cost in the same sentence.** Not "recommended" —
 what they get and what they give up. A person choosing CONSENSUS for version control should read
@@ -103,12 +104,16 @@ you did**:
 requests that test them, and what an ineffective rule looks like next to a working one. Read it
 here; do not improvise a syntax.
 
-- Where the tool has a permission configuration, write **deny rules** and then **verify they
-  refuse**. A rule that has not been seen to block is a rule nobody has tested.
+- Where the tool has a permission configuration, write rules that refuse and then **watch them
+  refuse**. A rule that has not been seen to block is a rule nobody has tested — and a rule only
+  covers the **spelling** it was written for, so one of the five test requests is deliberately the
+  same operation spelled differently. Expect that one to fail the first time.
 - **Whatever the outcome, it leaves a log, and the configuration records the path to it.** Never
   `verified` without one: a floor certification is an event, and an event with no artefact is an
   assertion.
 - Where no mechanism exists, say so: `none — agreement only`. Typically two of the four classes.
+- **`attempted, not verified` is the honest default**, not a lesser outcome. A class earns
+  `verified` only once the other-spelling request has been seen to refuse too.
 
 A floor that declares which of its four rows has teeth is honest. One that implies all four do is
 the thing this method exists to catch.
@@ -142,7 +147,7 @@ conversation is not a decision, because conversations end.
 
 Then **write the questionnaire answers into the channel as the first `from: owner` message.** The
 founding decisions — the language, the delegation levels, which agent does what — are the most
-important ones the person will ever make here, and without this step `grep -E '^from: +owner'` returns
+important ones the person will ever make here, and without this step `grep -E '^from: +owner$'` returns
 nothing on day one while both agents are told to treat it as the list of what is settled.
 
 It also gives the channel a baseline: that message's `head:` is the state the project started from.
@@ -179,7 +184,7 @@ rather than all of them.
 | `reference/protocol.md` | The channel: file names, front matter, immutability, and why each choice |
 | `reference/approvals.md` | The questionnaire, the traffic-light triage, the floor |
 | `reference/verification.md` | Why agreement between two agents is worth anything: declared scope, verifiers proven by breaking them, measurement rules |
-| `reference/floor-mechanism.md` | How to put a real mechanism behind the floor, and how to prove it refuses |
+| `reference/floor-mechanism.md` | How to put a real mechanism behind the floor, and how to prove it refuses. **Four tool-agnostic steps, then a worked example in one tool** — the second half is an annex, like the file below |
 | `reference/git-annex.md` | Only what depends on having a repository |
 
 ### The two rules to carry without opening anything

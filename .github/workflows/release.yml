@@ -72,6 +72,11 @@ jobs:
       - name: Stage exactly what the manifest lists
         run: |
           set -euo pipefail
+          # `zip -r out.skill dir` UPDATES an existing archive instead of replacing it, so
+          # a stale file from an earlier build survives into a freshly staged bundle. It is
+          # the same shape as `>` on an existing file: the operation looks like "write" and
+          # is "merge". Both paths are removed rather than assumed absent.
+          rm -rf build gtd-with-claude.skill
           mkdir -p build/gtd-with-claude
           while read -r f; do
             case "$f" in ''|\#*) continue ;; esac
@@ -102,7 +107,10 @@ jobs:
           rm -rf verify && mkdir verify
           unzip -q gtd-with-claude.skill -d verify
           test -d verify/gtd-with-claude || { echo "FATAL: bundle has no gtd-with-claude/ root"; exit 1; }
-          python scripts/validate_skill.py verify/gtd-with-claude --manifest MANIFEST
+          # --exact: the bundle is the manifest and nothing else. Without it this step
+          # checked one direction only -- everything listed is present -- and a bundle
+          # carrying an extra file printed "14 files, 13 manifest paths" and then VALID.
+          python scripts/validate_skill.py verify/gtd-with-claude --manifest MANIFEST --exact
 
       - name: Report what is being published
         run: |
