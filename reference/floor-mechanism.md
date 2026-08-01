@@ -126,11 +126,17 @@ the answer to be yes does not get to record it.
 And the log can then be checked, which is the point of building it this way:
 
 ```sh
-grep -c 'outcome: *$' "$LOG"
+echo "unfinished lines: $(grep -c 'outcome: *$' "$LOG" || true)"
 ```
 
 **Anything but `0` means the verification is unfinished**, whatever the configuration says. A
 `verified` pointing at a log with an empty outcome line is not a certification; it is a filename.
+
+The `|| true` is not decoration. `grep -c` **exits 1 when it matches nothing**, so without it the
+one state that means *the floor is fully verified* is the one state that returns a failure code —
+and this method puts command blocks into logs, hooks and pipelines as a matter of doctrine. It is
+the same shape as the check whose failure mode is to report success, inverted: a check whose
+success mode is to report failure, which gets silenced by whoever hits it first.
 
 ---
 

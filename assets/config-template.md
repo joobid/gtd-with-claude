@@ -31,24 +31,47 @@ The two agents read skills from **different stores**, and neither can see the ot
 the skill is loaded over there is an event in another process — so it is recorded here, where
 both can read it.
 
-| Agent | Skill available to it | Observed |
+| Agent | Skill available to it | Self-reported |
 |---|---|---|
 | Reviewing (`<tool>`) | `<yes / no>` | `<date>` |
 | Implementing (`<tool>`) | `<yes, at ~/.claude/skills / yes, at .claude/skills / no>` | `<date>` |
 
-**This is a self-report with a date, not a verification, and the difference is the same one
-`head:` makes.** Each agent can observe its own side and nothing else; a `yes` written in January
-still reads `yes` in March after somebody uninstalled it. What makes it useful is the rule below,
-not the row.
+**The column is called *self-reported* and not *observed*, and the word is the point.** Each agent
+can observe its own side and nothing else; the other row records what somebody said. A `yes`
+written in January still reads `yes` in March after somebody uninstalled it. It is the same
+distinction `head: clock:` makes against `head: sha:` — a value with a date and no way to check it
+from here.
 
 > **Every session compares its own side against its row before doing anything else.** Agreeing
-> costs nothing and produces no message. **Disagreeing means this file is wrong** — so that agent
-> corrects the row, records the correction in the channel, and says which way it went. A stale row
-> is then wrong for one session rather than for ever.
+> costs nothing and produces nothing. **Disagreeing goes in the channel as a message, and the agent
+> does not edit this file.**
+
+That last clause is deliberate and it was got wrong once. Letting each agent correct its own row
+would give this file **two writers**, which is exactly the shape `protocol.md` rejects for a shared
+status file — *"a one-slot resource with two writers… a collision waiting for a bad moment"*. The
+rows are per-agent, so a collision would be rare rather than impossible, and *rare* is not the
+standard this method holds anything else to.
+
+So the state is **derived**, like everything else here: this table is what was set up, and a later
+`from: <agent>` message correcting a row is the fresher fact. The person folds it back into this
+file when they next touch it. One writer, no locking, and the same rule that makes `re:` work.
 
 Where an agent's answer is `no`, it cannot open `reference/protocol.md` and works from the two
 files copied into the channel. That is a supported configuration, not a broken one — but the other
 agent has to know, because it changes what that agent can be asked to consult.
+
+| | |
+|---|---|
+| Installed, and what came back | `<path to log  /  not attempted>` |
+
+**An install is a verdict handed down from outside the project, and it leaves nothing behind
+unless somebody catches it.** Everything else this method records is an event *inside* the work —
+a command, a check, a decision — and there is a rule for each. An install, an upload, a publish,
+a gate refusing: those happen elsewhere and come back as a yes or a no, and the answer is
+reconstructed from memory a week later if nobody wrote it down.
+
+So the same rule as the floor: **never claim it installs without a path.** Attempt it, paste back
+what the installer said, verbatim, and put the file next to this one.
 
 ## What the person decides
 
@@ -87,10 +110,15 @@ stated gets argued with later.
 | Spending money | The agents do not hold the mandate. The error leaves an account, not a file | `<...>` |
 | Anything reaching a third party | The person's name is on it, and it cannot be recalled by deciding it was a mistake | `<...>` |
 
+> **`attempted, not verified` is the honest default**, and it is where every row starts. A class
+> earns `verified` only once the *other-spelling* request has been seen to refuse too — a deny rule
+> matches the text of a command, not the operation, so two rows passing usually means the two
+> spellings somebody thought of are the two they tested.
+
 > **Never `verified` without a path to a log.** A floor certification is an event, and an event
 > with no artefact is an assertion — the one thing this method does not let anything else get away
 > with. `reference/floor-mechanism.md` has the procedure: where the rules live, what to write, the
-> four requests that test them, and what an ineffective rule looks like.
+> five requests that test them, and what an ineffective rule looks like.
 
 > **The Mechanism column is the point of this table.** These four rows are a rule read by the agent
 > they restrict, and this method teaches you to distrust exactly that shape — *confirm the

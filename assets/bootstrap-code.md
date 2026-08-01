@@ -23,8 +23,10 @@ THEN COMPARE WHAT YOU FOUND against the row for the implementing agent in the co
 under "Where the method itself is installed".
 
   they agree     say nothing. No message, no noise
-  they disagree  THE FILE IS WRONG, not you. Correct the row and its Observed date, then write
-                 ONE message to the channel recording which way it went
+  they disagree  WRITE ONE MESSAGE to the channel saying what you found. DO NOT EDIT THE
+                 CONFIGURATION FILE -- if both agents corrected their own rows it would have two
+                 writers, which is the shape protocol.md rejects for a shared status file. The
+                 message is the fresher fact and the person folds it back in later
 
 That row is the only way the reviewing agent can know whether you can open the reference files at
 all -- it cannot see this session, and an event in a process nobody can read is not state. You are

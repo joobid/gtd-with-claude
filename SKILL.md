@@ -192,18 +192,27 @@ format it can reach is the one in the channel.
 copied channel files exist for exactly this case.
 
 **Either way, fill the "Where the method itself is installed" table in the configuration**, one
-row per agent, with the date each was observed. Then say out loud what that table is and is not:
+row per agent, dated. Then say out loud what that table is and is not:
 
-> Neither agent can see the other's session, so **this is a self-report with a date, not a
-> verification** — the same distinction `head: sha:` makes against `head: clock:`. What makes it
-> worth having is that **every session compares its own row before doing anything else**: agreeing
-> is silent, and disagreeing means the file is wrong and gets corrected there and then. A row that
-> goes stale is wrong for one session instead of for ever.
+> Neither agent can see the other's session, so **it is a self-report with a date, not a
+> verification** — the same distinction `head: sha:` makes against `head: clock:`. Every session
+> compares its own row before doing anything else; agreeing is silent, and **disagreeing produces a
+> channel message, not an edit to the configuration.** Two agents correcting their own rows would
+> give that file two writers, which is the shape `protocol.md` rejects for a shared status file —
+> so the state is derived here too: the table is what was set up, a later message is the fresher
+> fact, and the person folds it back in.
 
 Both bootstrap prompts carry that comparison already. The reviewing side also reads the *other*
 row, because an agent that cannot open `reference/protocol.md` has to be cited channel files
 rather than reference paths — and a divergence from the protocol by an agent that cannot read the
 protocol is a missing document, not carelessness.
+
+**And capture the install itself.** An install is a verdict handed down from outside the project:
+it happens elsewhere, comes back as a yes or a no, and leaves nothing behind unless somebody
+catches it. Attempt it, paste back verbatim what the installer said, and record the path in the
+configuration — `never claim it installs without a path`, the same rule the floor already lives
+under. This is the one class of event the method had no procedure for, and it is the class that
+has actually failed.
 
 Tell them plainly what the method does *not* do, in your own words:
 

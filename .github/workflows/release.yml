@@ -89,10 +89,11 @@ jobs:
         run: |
           set -euo pipefail
           echo "tag:   ${GITHUB_REF_NAME}"
-          echo "size:  $(du -h gtd-with-agents.skill | cut -f1)"
+          echo "size:  $(du -h ./*.skill | cut -f1)"
           python - <<'PY'
           import zipfile
-          z = zipfile.ZipFile("gtd-with-agents.skill")
+          import glob
+          z = zipfile.ZipFile(glob.glob("*.skill")[0])
           print("files:", len(z.infolist()))
           for n in sorted(z.namelist()):
               print("  ", n)
@@ -101,5 +102,5 @@ jobs:
       - name: Publish it on the release
         uses: softprops/action-gh-release@v2
         with:
-          files: gtd-with-agents.skill
+          files: '*.skill'
           generate_release_notes: true

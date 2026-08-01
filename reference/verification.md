@@ -245,6 +245,38 @@ A check that reports the same thing under data that no longer means the same thi
 a reason unrelated to what it claims. That is measurable rather than merely suspected, and it is
 the difference between a check you trust and a check you hope about.
 
+## 12 · A verdict from outside leaves no artefact unless you catch it
+
+Everything above governs events **inside** the work: a command ran, a check passed, a rule
+refused. Each has a rule, and the rule is always the same one — turn the event into state so
+somebody who was not there can read it.
+
+There is a second class, and it had no rule at all: **an event that happens elsewhere and comes
+back as a verdict.** An install. An upload. A publish. A gate refusing. You do not run these; you
+submit to them and something answers, and the answer arrives once, in an interface, and is gone.
+
+> **Attempt it, capture what came back verbatim, and put the file where the claim lives.**
+
+Three things make this the easiest artefact in the method to lose:
+
+- **It feels like a result rather than an event.** *"It installed"* sounds like a state of the
+  world, so nobody thinks to log it — while *"the tests passed"* has been drilled into a log for
+  years.
+- **The failure is the informative half, and failures get fixed rather than filed.** You read the
+  error, change something, try again, and the message that told you what the gate actually
+  enforces exists only in the memory of whoever was at the keyboard.
+- **It gets reconstructed later into prose**, in a commit message or a code comment, which reads
+  like a record and is a recollection. A week on, nobody can say which version was refused or what
+  exactly it said.
+
+So a claim of the form *"this is accepted by X"* carries a path, on the same terms the floor
+already lives under: **never `accepted` without a log.** And the log is written before the attempt
+with the outcome blank, so an attempt nobody finished looks unfinished rather than absent.
+
+Note what this is not. It is not evidence that the artefact is good — it is evidence of what one
+gate said on one day about one version. That is exactly why it has to be written down rather than
+remembered: it is narrow, it expires, and it is the only thing you have.
+
 ---
 
 ## Every command block leaves a record

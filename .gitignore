@@ -9,3 +9,11 @@ exchange/
 build/
 verify/
 __pycache__/
+
+# The process behind the method, not the method: adversarial review briefs and the
+# reports they produced. They are working material -- written in Spanish, addressed
+# to one person, full of half-formed findings and superseded numbers -- and a reader
+# who lands on them mistakes them for documentation of the skill.
+#
+# They stay on disk. Nothing here is deleted, and the next round still reads them.
+docs-review-*

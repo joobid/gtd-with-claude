@@ -24,30 +24,76 @@ Why this file replaced three shell steps, and it is a defect found by installing
     staged bundle and passed. Writing the archive from Python removes both at the source --
     there is no pre-existing object to merge into, and no directory entries to emit.
 
-The shape rules below mirror the reference packager in `skill-creator`, which is the thing
-that has to accept this file. They are not invented here; they were read from it.
+The shape rules below were derived from what the reference packager in `skill-creator`
+PRODUCES -- it has no shape checks of its own, it simply writes files only and deflates
+them. That is a different act from reading its rules, and the difference matters:
+**the reference packager is not the gate.** The installer is, and it enforces at least one
+rule the reference validator does not have. Saying "mirrors the reference" is fair; saying
+"therefore this will be accepted" is the claim `verification.md` section 11 forbids, and
+this docstring made it until round 4 pointed at it.
 """
 from __future__ import annotations
 
-import shutil
+import re
 import sys
+import warnings
 import tempfile
 import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-NAME = "gtd-with-agents"
 
 sys.path.insert(0, str(ROOT / "scripts"))
 from validate_skill import read_manifest, validate           # noqa: E402
 
 
+def skill_name() -> str:
+    """The archive root, read from SKILL.md rather than kept as a constant here.
+
+    It used to be `NAME = "gtd-with-agents"`, and `check_shape` validated the archive root
+    against it -- so the one property tying the artefact to the skill's identity compared a
+    constant against itself. Changing the constant produced a bundle with the wrong root,
+    the wrong filename, and every check green.
+
+    The identity has one source now. A rename that misses this file cannot happen, because
+    there is nothing here to miss.
+    """
+    m = re.match(r"^---\n(.*?)\n---", (ROOT / "SKILL.md").read_text(encoding="utf-8"), re.S)
+    if not m:
+        raise SystemExit("FATAL: SKILL.md has no frontmatter, so the bundle has no name.")
+    n = re.search(r"^name:\s*(\S+)\s*$", m.group(1), re.M)
+    if not n:
+        raise SystemExit("FATAL: SKILL.md frontmatter has no name, so the bundle has no name.")
+    return n.group(1)
+
+
+NAME = skill_name()
+
+# Filled by build(); read by check_shape(). See the comment in build().
+WRITER_WARNINGS: list[str] = []
+
+
 def build(manifest: list[str], out: Path, extra: dict[str, str] | None = None,
-          keep_dir_entries: bool = False, stored: bool = False) -> Path:
-    """Write the archive. `extra`, `keep_dir_entries` and `stored` exist for the self-test."""
+          keep_dir_entries: bool = False, stored: bool = False,
+          duplicate: str | None = None) -> Path:
+    """Write the archive. The last three arguments exist only for the self-test."""
     if out.exists():
         out.unlink()          # never merge into an existing archive
     comp = zipfile.ZIP_STORED if stored else zipfile.ZIP_DEFLATED
+    if duplicate:
+        manifest = manifest + [duplicate]
+    # The writer's own warnings are evidence, not noise. `zipfile` raises a UserWarning on
+    # a duplicate entry, and the first version of this file let it print to stderr and
+    # reported BUILT anyway -- a library telling the truth into a channel nobody read.
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        _write(out, comp, manifest, extra, keep_dir_entries)
+    WRITER_WARNINGS[:] = [str(w.message) for w in caught]
+    return out
+
+
+def _write(out: Path, comp: int, manifest: list[str],
+           extra: dict[str, str] | None, keep_dir_entries: bool) -> None:
     with zipfile.ZipFile(out, "w", comp) as z:
         if keep_dir_entries:
             z.writestr(f"{NAME}/", b"")
@@ -58,12 +104,12 @@ def build(manifest: list[str], out: Path, extra: dict[str, str] | None = None,
             z.write(src, f"{NAME}/{rel}")
         for rel, body in (extra or {}).items():
             z.writestr(f"{NAME}/{rel}", body)
-    return out
 
 
 def check_shape(archive: Path, manifest: list[str]) -> list[str]:
     """What the bundle IS, as opposed to what it contains."""
-    problems = []
+    problems = list(f"the zip writer warned and it was not read: {w}"
+                    for w in WRITER_WARNINGS)
     with zipfile.ZipFile(archive) as z:
         infos = z.infolist()
 
@@ -78,7 +124,21 @@ def check_shape(archive: Path, manifest: list[str]) -> list[str]:
         if undeflated:
             problems.append(f"{len(undeflated)} entries not deflated: {undeflated[:3]}")
 
-        names = {i.filename for i in infos}
+        # Duplicates first, and BEFORE any set is built. The previous version compared
+        # `{i.filename for i in infos}` against a set of wanted names, so two entries with
+        # the same name collapsed into one and the comparison could not see them -- while
+        # `zipfile` itself raised a UserWarning about it that nobody read. A duplicate
+        # manifest line produced a 14-entry archive and a green report.
+        seen: dict[str, int] = {}
+        for i in infos:
+            seen[i.filename] = seen.get(i.filename, 0) + 1
+        dupes = sorted(n for n, c in seen.items() if c > 1)
+        if dupes:
+            problems.append(f"{len(dupes)} name(s) appear more than once in the archive: "
+                            f"{dupes}. A zip can hold two entries with one name; an "
+                            f"installer reads one of them and nobody knows which")
+
+        names = set(seen)
         want = {f"{NAME}/{m}" for m in manifest}
         if names != want:
             missing, extra = sorted(want - names), sorted(names - want)
@@ -111,6 +171,7 @@ def main() -> int:
             ("a bundle whose entries are stored, not deflated", dict(stored=True)),
             ("a bundle carrying a file the manifest does not list",
              dict(extra={"stale.md": "left over from an earlier build\n"})),
+            ("a bundle with the same name twice", dict(duplicate="SKILL.md")),
         ]
         ok = True
         with tempfile.TemporaryDirectory() as t:

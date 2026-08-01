@@ -32,16 +32,19 @@ CHECK WHETHER /gtd-with-agents IS AVAILABLE HERE. If it is, use it: this prompt 
 the skill is the method. If it is not, work from <channel>/README.md.
 
 Then compare that against your own row in the configuration file, under "Where the method itself
-is installed". Agreeing produces no message. Disagreeing means THE FILE IS WRONG: correct the row
-and its Observed date, and write one message recording it.
+is installed". Agreeing produces nothing. Disagreeing produces ONE message to the channel saying
+what you found -- and you DO NOT EDIT the configuration file. Two agents correcting their own rows
+would give that file two writers, which is the shape protocol.md rejects. The state is derived:
+the table is what was set up, your message is the fresher fact.
 
-AND READ THE OTHER AGENT'S ROW, because it changes what you may ask of it. If it says the skill is
-not available there, that agent cannot open reference/protocol.md and is working from the two
-files copied into the channel -- so cite those, never a reference path, and do not read a
-divergence from the protocol as carelessness when it is a document it cannot reach.
+AND READ THE OTHER AGENT'S ROW, plus any later message correcting it, because it changes what you
+may ask of it. If the skill is not available there, that agent cannot open reference/protocol.md
+and is working from the two files copied into the channel -- so cite those, never a reference
+path, and do not read a divergence from the protocol as carelessness when it is a document it
+cannot reach.
 
-That row is a self-report with a date, like a clock: head. You cannot verify it from here and you
-do not try: it says what somebody observed, and only the session on that side can refresh it.
+That row is a SELF-REPORT with a date, like a clock: head. You cannot verify it from here and you
+do not try: it says what somebody reported, and only the session on that side can refresh it.
 
 FIRST ACTION: measure the state and present it before proposing anything. What is unsaved, what
 the checks return, what the last messages in the channel say, and which of them are still open:

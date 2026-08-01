@@ -70,12 +70,42 @@ def substitutions(channel: Path) -> dict[str, str]:
     return {"<channel>": str(channel)}
 
 
+COMMANDISH = re.compile(
+    r"(^|\n)\s{0,4}(grep|ls |find |git |unzip|mkdir|python|cd |cat |awk|for |echo |rm )")
+
+
+def fences(doc: Path) -> list[tuple[str, str, int]]:
+    """Every fenced block, in order, as (info string, body, starting line).
+
+    Walked line by line rather than matched with a regex, and that is not fussiness.
+    A pattern like `^```(?!sh$)\\w*\\n(.*?)^```` treats the CLOSING fence of an sh block
+    as an opening one, swallows the prose after it, and reports a 160-line "block" that
+    is three real blocks and the text between them. It was counting fence MARKERS in
+    pairs of two without knowing which of each pair was an opener -- so every count of
+    non-sh blocks this file has ever printed, including the 27 two reviews quoted, came
+    from an instrument that could not tell an opening fence from a closing one.
+
+    Fences alternate. Tracking that is four lines and it is the whole fix.
+    """
+    out, open_at, info, buf = [], None, "", []
+    for n, ln in enumerate(doc.read_text(encoding="utf-8").splitlines(), 1):
+        if ln.startswith("```"):
+            if open_at is None:
+                open_at, info, buf = n, ln[3:].strip(), []
+            else:
+                out.append((info, "\n".join(buf) + "\n", open_at))
+                open_at = None
+        elif open_at is not None:
+            buf.append(ln)
+    if open_at is not None:
+        raise SystemExit(f"FATAL: {doc.name} has an unclosed fence opened at line {open_at}. "
+                         f"Nothing in that file was checked.")
+    return out
+
+
 def extract(doc: Path) -> list[tuple[int, str]]:
     """Every fenced sh block, with the line it starts on."""
-    out, text = [], doc.read_text(encoding="utf-8")
-    for m in re.finditer(r"^```sh\n(.*?)^```", text, re.S | re.M):
-        out.append((text[:m.start()].count("\n") + 1, m.group(1)))
-    return out
+    return [(n, body) for info, body, n in fences(doc) if info == "sh"]
 
 
 def units(block: str) -> list[str]:
@@ -169,7 +199,15 @@ def is_channel_query(unit: str) -> bool:
 
 def classify(unit: str) -> str | None:
     """Which ground truth this query claims to produce. Order matters: the escalation
-    query mentions `from: owner` in its own derivation, so it must be tested first."""
+    query mentions `from: owner` in its own derivation, so it must be tested first.
+
+    Comments are stripped before matching. They used to count, so a perfectly correct
+    owner query carrying `# decisions; some close a state: escalated message` -- a comment
+    the documentation elsewhere writes as prose -- was compared against the escalation
+    ground truth and reported as broken. The ordering reason above is about two greps
+    colliding; extending it to prose is what made it fire on a sentence.
+    """
+    unit = re.sub(r"#.*$", "", unit, flags=re.M)
     if "state: +escalated" in unit or "state: escalated" in unit:
         return "escalated"
     if "state: +open" in unit or "state: open" in unit:
@@ -187,7 +225,7 @@ def check(ch: Path, expect: dict[str, set[str]],
           docs: list[Path] | None = None) -> tuple[list[str], dict[str, int]]:
     """Run the documented channel queries and compare filename SETS, one per query."""
     findings: list[str] = []
-    scope = {"compared": 0, "skipped": 0, "unfenced": 0}
+    scope = {"compared": 0, "skipped": 0, "unfenced": 0, "unfenced_with_commands": 0}
     subs = substitutions(ch)
 
     if docs is None:
@@ -199,8 +237,18 @@ def check(ch: Path, expect: dict[str, set[str]],
         # bootstrap prompts are entirely that shape, and they hold the commands the agents
         # actually run first. Counting them is not checking them -- but an unexamined
         # region that nobody counts is the declared-scope defect this file exists to avoid.
-        scope["unfenced"] += len(re.findall(r"^```(?!sh$)\w*\n.*?^```",
-                                            p.read_text(encoding="utf-8"), re.S | re.M))
+        #
+        # And it counts the ones that CARRY A COMMAND, not every fence. Counting fences
+        # said "27 unexamined blocks" when 21 of them were front-matter and message
+        # samples: a declared scope four and a half times the size of the thing it stood
+        # for, which is this file's own section 1 defect -- a scope printed accurately and
+        # measuring the wrong object.
+        for info, body, _n in fences(p):
+            if info == "sh":
+                continue
+            scope["unfenced"] += 1
+            if COMMANDISH.search(body):
+                scope["unfenced_with_commands"] += 1
         for line, block in extract(p):
             for unit in units(block):
                 if not is_channel_query(unit):
@@ -227,9 +275,17 @@ def check(ch: Path, expect: dict[str, set[str]],
 
                 scope["compared"] += 1
                 rc, out, err = run(script, ch)
-                if rc != 0:
+                # exit 1 from `grep` means "matched nothing", which is a RESULT, not a
+                # broken command -- and it is the archetypal symptom of the defect this
+                # file exists to catch. The guard used to fire on it, so the one case
+                # where the set difference is most informative was the one case it was
+                # never computed: a query matching nothing got reported as a syntax
+                # problem and the reader was sent to look in the wrong place.
+                # Above 1 is a real failure, and so is the placeholder case handled above.
+                if rc > 1:
                     findings.append(
-                        f"{rel}:{line} did not run (exit {rc}) -- {err.splitlines()[0] if err else 'no message'}")
+                        f"{rel}:{line} did not run (exit {rc}) -- "
+                        f"{err.splitlines()[0] if err else 'no message'}")
                     continue
 
                 got = {Path(x.strip()).name for x in out.splitlines()
@@ -345,8 +401,9 @@ def main() -> int:
               f"{len(expect['listing'])}-file fixture built by the writer "
               f"assets/message-template.md documents")
         print(f"NOT EXAMINED: {scope['skipped']} units that are not channel queries, and "
-              f"{scope['unfenced']} blocks in a fence other than ```sh -- including both "
-              f"bootstrap prompts, which carry commands this checker never runs")
+              f"{scope['unfenced_with_commands']} of {scope['unfenced']} blocks in a fence "
+              f"other than ```sh carry commands -- including both bootstrap prompts, which "
+              f"are the first thing each agent runs and which this checker never does")
         print("OK" if not findings
               else "COMMANDS IN THE DOCUMENTATION DO NOT DO WHAT THEY CLAIM")
         return 0 if not findings else 1

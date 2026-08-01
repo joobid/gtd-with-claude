@@ -189,7 +189,7 @@ over. Three levels:
 | **DECIDE** | You decide, every time, before anything happens |
 | **CONSENSUS** | The two agents agree, act, and tell you afterwards |
 | **DELEGATED** | They act and do not interrupt. It stays in the record |
-| **NOT APPLICABLE** | Your project does not do that at all — and the reason is written down, because a blank looks like a question nobody reached |
+| **NOT APPLICABLE — `<reason>`** | Your project does not do that at all. The reason is **part of the value**, on the same line — a bare `NOT APPLICABLE` is indistinguishable from a row nobody reached |
 
 Every option is presented with its gain **and its cost in the same sentence**, because an option
 without its cost is a default with a label on it:
@@ -238,14 +238,20 @@ Claude Code filesystem, and vice versa.
 **1a. Cowork.** Download `gtd-with-agents.skill` from the
 [latest release](../../releases/latest) and open it — the file card has a **Save skill** button.
 
-**1b. Claude Code.** Unpack the same bundle into a skills directory. Either scope works, and the
-choice is about reach, not about the method:
+**1b. Claude Code.** Unpack the same bundle into a skills directory. **Pick one of these two** —
+the choice is about reach, not about the method.
+
+Every project of yours:
 
 ```sh
-mkdir -p ~/.claude/skills                        # every project of yours
+mkdir -p ~/.claude/skills
 unzip -q gtd-with-agents.skill -d ~/.claude/skills
+```
 
-mkdir -p .claude/skills                          # or: this project only, shared with the repo
+Or this project only, shared with whoever has the repository:
+
+```sh
+mkdir -p .claude/skills
 unzip -q gtd-with-agents.skill -d .claude/skills
 ```
 
