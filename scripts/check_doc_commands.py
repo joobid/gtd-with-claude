@@ -391,6 +391,65 @@ def self_test(ch: Path, expect: dict[str, set[str]], tmp: Path) -> bool:
     return ok
 
 
+# ---------------------------------------------------------------------------
+# The other executable block this repository publishes
+# ---------------------------------------------------------------------------
+
+def check_floor_template(tmp: Path) -> tuple[list[str], int]:
+    """The floor log template has to be able to hold what the procedure produces.
+
+    This file declared, run after run, that it examined channel queries and not the
+    other blocks -- and the comment above DOC_GLOBS said in so many words that
+    `floor-mechanism.md` "carries two runnable blocks". It was discovered, counted
+    among the unexamined, and never run.
+
+    Then the instruction "run each request twice" was added and the template that
+    records the results was not, in the same commit. Ten results, five slots, and it
+    shipped. **The honest line naming what this file did not look at turned out to be
+    a prediction**, which is the strongest argument there is for declaring scope: the
+    gap was visible in every run for weeks before anything fell into it.
+
+    The invariant below cannot be satisfied by accident. Both sides are parsed from
+    the document -- the number of requests from the table that describes them, the
+    number of shapes from the sentence that doubles them, and the number of blanks
+    from actually running the template -- so a change to either side that forgets the
+    other fails here rather than in somebody's log six months later.
+    """
+    doc_path = ROOT / "reference/floor-mechanism.md"
+    doc = doc_path.read_text(encoding="utf-8")
+
+    rows = re.findall(r"^\| (\d+) \| (.+?) \|", doc, re.M)
+    if not rows:
+        return ([f"{doc_path.name}: no numbered request table found. Nothing was checked "
+                 f"about the floor template, which is not a pass."], 0)
+    requests = [r for r in rows if not r[1].strip().lstrip("*").startswith("Nothing")]
+    non_requests = len(rows) - len(requests)
+    shapes = 2 if "Run each request twice" in doc else 1
+    expected = len(requests) * shapes + non_requests
+
+    block = next((b for _, b in extract(doc_path) if "floor-verification.log" in b), None)
+    if block is None:
+        return ([f"{doc_path.name}: the log template block is gone. The procedure tells "
+                 f"the person to write a log and there is nothing to write it with."], 0)
+
+    work = tmp / "floor"
+    work.mkdir(parents=True, exist_ok=True)
+    rc, out, err = run(block, work)
+    if rc != 0 or "LOG: " not in out:
+        return ([f"{doc_path.name}: the log template did not run (exit {rc}) -- "
+                 f"{(err or out).splitlines()[0] if (err or out) else 'no message'}"], 0)
+
+    log = work / out.split("LOG: ")[-1].strip()
+    blanks = sum(1 for ln in log.read_text(encoding="utf-8").splitlines()
+                 if ln.rstrip().endswith("outcome:"))
+    if blanks != expected:
+        return ([f"{doc_path.name}: the template leaves {blanks} outcomes to fill and the "
+                 f"procedure produces {expected} ({len(requests)} requests x {shapes} "
+                 f"shape(s) + {non_requests} not a request). One of the two was changed "
+                 f"without the other."], 1)
+    return ([], 1)
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory() as t:
         tmp = Path(t)
@@ -404,9 +463,12 @@ def main() -> int:
             return 0 if passed else 1
 
         findings, scope = check(ch, expect)
+        floor, floor_checked = check_floor_template(tmp)
+        findings += floor
         for f in findings:
             print(f"  FAIL {f}")
-        print(f"\nEXAMINED: {scope['compared']} channel queries compared against a "
+        print(f"\nEXAMINED: {scope['compared']} channel queries and {floor_checked} floor "
+              f"log template compared against a "
               f"{len(expect['listing'])}-file fixture built by the writer "
               f"assets/message-template.md documents")
         print(f"NOT EXAMINED: {scope['skipped']} units that are not channel queries, and "
