@@ -59,15 +59,28 @@ the person. Nothing else in this prompt surfaces it, and an escalation nobody lo
 failure this whole method exists to prevent.
 
   cd <channel> || exit 1
-  closed=$(grep -lE '^from: +owner$' *.md | xargs -r grep -hE '^re: +' | awk '{print $2}' | sort -u)
-  for f in $(grep -lE '^state: +escalated$' *.md); do
-    echo "$closed" | grep -qx "$(basename "$f")" || echo "$f"
+  n=$(ls -1 *.md 2>/dev/null | wc -l)
+  [ "$n" -eq 0 ] && { echo "BLIND: no messages here. Wrong directory, or no channel yet."; exit 2; }
+  echo "EXAMINED: $n messages"
+  answered=$(grep -hE '^re: +' *.md | awk '{print $2}' | grep -v '^-$' | sort -u)
+  for f in $(grep -lE '^to: +(owner|both)$' *.md); do
+    grep -qE '^state: +(open|escalated)$' "$f" || continue
+    echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
   done
 
-A BARE grep FOR EITHER STATE IS WRONG, and that is why both of these derive: files are immutable,
-so an answered question says state: open for ever and a resolved escalation says state: escalated
-for ever. The bare form returns every one ever raised. <channel>/README.md has the same queries
-for open questions, subtracting whatever a later message answers.
+NOT state: escalated ALONE. Two agents that exchange facts instead of escalating produce almost
+none: a full day of real use produced ZERO escalations and three unanswered messages addressed to
+the person, one of them a red command block. A query on escalations returns nothing all day, and
+nothing reads as "nothing needs you".
+
+A BARE grep FOR ANY STATE IS WRONG, and that is why these derive: files are immutable, so an
+answered message keeps its state for ever and the bare form returns every one ever raised. And
+they declare what they examined, because zero from the wrong directory looks like a quiet channel.
+
+IF YOU STOP, SAY WHAT WOULD UNBLOCK YOU, as something the others can check without asking you --
+the log that has not appeared, the message nobody answered. "Waiting" is not a state anyone else
+can see, and an agent blocked for a reason living only in its own session is invisible: it cost
+two hours the first day this method ran.
 
 READ WHAT THE PERSON HAS ALREADY DECIDED before proposing anything -- including what they
 decided in the OTHER session. Both agents record their exchanges with the person, so a choice

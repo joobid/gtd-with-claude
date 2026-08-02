@@ -246,6 +246,63 @@ the part that was actually costing something.
 
 ---
 
+### A command block is written down before it runs, and the block proves it
+
+A question and a modal prompt are covered above. The third thing an agent hands a person is a
+**block of commands**, and it is the only one of the three that acts on the world. It was the one
+without a rule.
+
+**The block and the reason for it are written to the channel before it is offered**, `to: owner`.
+The modal that follows is then a confirmation of something already written and reviewable rather
+than the first anyone hears of it — and the reviewing agent can object while the person is still
+reading.
+
+**And the block proves that message exists.** First lines, above the work:
+
+```sh
+PROP="<channel>/<the message that proposes this>"
+test -s "$PROP" || { echo "FAILED: no message proposes this, or it is empty"; exit 1; }
+test "$(wc -l < "$PROP")" -ge 8 || { echo "FAILED: $PROP has no body to review"; exit 1; }
+echo "proposed in $PROP"
+```
+
+This is not ceremony. On the first day this method ran end to end, an agent handed the person a
+red block — `rm` inside the version-control directory — **citing a channel message it had never
+written**, and the person ran it. Naming an artefact is not evidence that it exists, and when the
+artefact is a file, checking costs one line.
+
+**What it establishes, and what it does not.** It establishes that a file exists with a body long
+enough to be a message rather than a stub — front matter alone is seven lines, so eight is the
+cheapest thing that is not empty. It does **not** establish that the body is any good, or that it
+describes this block. A determined agent can satisfy it with eight lines of nothing. It closes
+the failure that happened rather than every failure imaginable, and saying which is which is the
+point of writing it down.
+
+**And it costs something**, which is worth saying in the same breath: every block the person sees
+now opens with three lines of protocol before the work. That is the trade — a little noise in
+front of every block, against a red one running on a premise nobody could check.
+
+It changes the failure mode twice over: the agent has to produce the file before it can cite it,
+and the person sees `FAILED` **before** anything executes rather than trusting a filename they
+were told about.
+
+A skipped rule is visible — the directory is empty where the message should be. **A false claim
+of compliance is not**, and that is why this is a line of shell rather than a paragraph asking
+nicely. A protocol enforced only by agreement fails the way this one failed: **by reporting
+success.** That is `verification.md` §5 — *confirm the mechanism, not the document* — applied to
+this method's own governance, which is the one place it had never been pointed.
+
+The sweep, for anyone auditing afterwards:
+
+```sh
+for l in <runs>/*.log; do grep -q '^proposed in ' "$l" || echo "NO PROVENANCE: $l"; done
+```
+
+Logs written before this rule existed carry no such line and are **declared out of its scope**,
+not silently skipped.
+
+---
+
 ## What the channel is not
 
 **It is not a record.** It holds the deliberation, not the decision.
@@ -263,12 +320,53 @@ waiting.
 
 ---
 
+## Every wait names the artefact that ends it
+
+An agent that stops has to say what would unblock it, **in a form the other two parties can check
+without asking it**. Not *"waiting for the owner"* — the file whose appearance ends the wait.
+
+```sh
+ls -1 <runs>/*-<slug>.log >/dev/null 2>&1 && echo "the block has run" || echo "not yet"
+```
+
+Note the shape of that line rather than the obvious one. `ls … | head -1` sends its error to a
+stream nobody reads and returns the exit code of `head`, which is always zero — so the version
+that looks natural reports success whether the file is there or not. It is the same defect the
+whole method is written against, in the command proposed to fix a different one.
+
+This is the state/events frontier turned into a command. *"No record here"* is a correct answer
+and, on its own, a useless one: it is unfalsifiable and it never expires. A named artefact makes
+the same statement checkable — two outcomes, and either party can reach them.
+
+**The cost of not having this is measured.** On the day this method was first run end to end, one
+agent sat blocked for two hours on a condition that existed only inside its own chat. The other
+could see the project was clear and could not see why nothing was happening. Nothing was wrong;
+nothing was visible either. The same day, an orphaned lock file blocked both agents for an hour —
+the same shape, a real impediment invisible from the other side.
+
+So a message with `state: open` names, in its last section, the artefact whose appearance closes
+it. Where the wait is on a person rather than on a file, name what they were asked and where it
+is recorded — which is a `to: owner` message, and that one is already greppable.
+
+---
+
 ## Finding what is live
 
 **These are not one-liners, and the reason matters.** Because files are immutable, an answered
 message still says `state: open` for ever. A bare `grep -E '^state: +open$'` returns *every question
 ever asked*, which at month three is sixty paths the person cannot triage. The state of the
 conversation is derived, so the query has to do the derivation.
+
+**Each of these declares what it examined, and refuses to answer over nothing.** A query that
+returns zero from the wrong directory looks exactly like a healthy channel with nothing open —
+which is the blind state §1 of `verification.md` defines, and it is not an approval. Run them
+from inside the channel, and let them say so:
+
+```sh
+n=$(ls -1 *.md 2>/dev/null | wc -l)
+[ "$n" -eq 0 ] && { echo "BLIND: no messages here. Wrong directory, or no channel yet." >&2; exit 2; }
+echo "EXAMINED: $n messages"
+```
 
 ```sh
 # Open questions: state: open, minus anything a later message answers.
@@ -279,12 +377,24 @@ done
 ```
 
 ```sh
-# What the person needs to look at: escalations nothing has closed.
-closed=$(grep -lE '^from: +owner$' *.md | xargs -r grep -hE '^re: +' | awk '{print $2}' | sort -u)
-for f in $(grep -lE '^state: +escalated$' *.md); do
-  echo "$closed" | grep -qx "$(basename "$f")" || echo "$f"
+# What waits on the person: anything addressed to them that nothing has answered.
+# Both kinds, because they arrive at very different rates.
+answered=$(grep -hE '^re: +' *.md | awk '{print $2}' | grep -v '^-$' | sort -u)
+for f in $(grep -lE '^to: +(owner|both)$' *.md); do
+  grep -qE '^state: +(open|escalated)$' "$f" || continue
+  echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
 done
 ```
+
+**`escalated` on its own is not that query, and the difference is measured.** Over a full working
+day of real use — twenty-four messages, three blocked moments, four batches waiting for approval —
+the channel held **zero** escalations and three unanswered messages addressed to the person. A
+query restricted to escalations returned nothing, all day, while a red command block sat waiting.
+
+That is not a bug in it; it does exactly what it says. It is the **wrong object**. `escalated` is
+rare *by design*, because this method spends its effort making two agents exchange facts instead
+of escalating — so the better it works, the emptier that query gets, and its failure mode is
+returning zero, which reads as *nothing needs you*.
 
 ```sh
 grep -lE '^from: +owner$' *.md     # every decision the person has made

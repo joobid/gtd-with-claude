@@ -102,6 +102,24 @@ whatever was convenient at the time. Review them the way you would review any co
 - **An agent does not edit its own permission file.** An agent that can widen its own limits has
   advisory limits.
 
+## What a declared scope feels like to use
+
+Two things nobody expects, both learned by hitting them:
+
+- **It serialises your batches.** The narrow case — a file inside the declared scope, modified and
+  not staged — usually *blocks* rather than warns. So a scope naming two files refuses the commit
+  of the first while the second is still pending, and two unrelated edits cannot ride in one
+  declaration. The rhythm is **scope → commit → scope → commit**, one subject at a time. That is
+  the feature working, not the tool misbehaving: it is what stops a batch from quietly carrying
+  half of somebody else's work. But it is worth knowing before the first refusal, because the
+  natural first attempt is to declare everything in flight and commit it together. It cost four
+  refusals in one afternoon before anyone wrote this down.
+
+- **Work outside the declared scope is the invisible region** — §9 of `verification.md`, the
+  fourth region of a check that partitions on two conditions — and it is fine to have things
+  there. A local edit belonging to no milestone is legitimate. It should be **reported, never
+  blocked**: a check that forbids ordinary work gets switched off, and then it protects nothing.
+
 ## The daily triage, in version-control vocabulary
 
 `approvals.md` Part 3 asks one question — *if this is wrong, do I get it back?* — against

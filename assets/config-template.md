@@ -179,15 +179,22 @@ find . -newermt yesterday -type f -not -path './exchange/*' | head -30
 ls -1t exchange/2*.md | head -20
 ```
 
-**And in either case, what still needs the person.** Not a bare `grep`: because files are
-immutable, a resolved escalation still says `state: escalated` for ever, so the bare form returns
-every escalation ever raised. The state is derived, so the query has to derive it.
+**And in either case, what still waits on you.** Not a bare `grep`: because files are immutable,
+an answered message keeps its state for ever, so the bare form returns everything ever raised. The
+state is derived, so the query has to derive it — and it looks at what is **addressed to you**,
+not only at escalations, because escalations are rare by design and a query that returns zero all
+day reads as *nothing needs you*.
 
 ```sh
 cd <channel> || exit 1
-closed=$(grep -lE '^from: +owner$' *.md | xargs -r grep -hE '^re: +' | awk '{print $2}' | sort -u)
-for f in $(grep -lE '^state: +escalated$' *.md); do
-  echo "$closed" | grep -qx "$(basename "$f")" || echo "$f"
+n=$(ls -1 *.md 2>/dev/null | wc -l)
+[ "$n" -eq 0 ] && { echo "BLIND: no messages here. Wrong directory, or no channel yet." >&2; exit 2; }
+echo "EXAMINED: $n messages"
+# What waits on the person: anything addressed to them that nothing has answered.
+answered=$(grep -hE '^re: +' *.md | awk '{print $2}' | grep -v '^-$' | sort -u)
+for f in $(grep -lE '^to: +(owner|both)$' *.md); do
+  grep -qE '^state: +(open|escalated)$' "$f" || continue
+  echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
 done
 ```
 

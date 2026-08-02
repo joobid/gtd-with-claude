@@ -166,15 +166,22 @@ def build_fixture(ch: Path, tmp: Path) -> dict[str, set[str]]:
     q3 = write("code", "code", "cowork", "-", "open", "q-three")
     q4 = write("code", "code", "cowork", "-", "open", "q-four-answered")
     c1 = write("cowork", "cowork", "code", q4, "consensus", "answer-to-q-four")
-    e1 = write("code", "code", "cowork", "-", "escalated", "esc-live")
-    e2 = write("code", "code", "cowork", "-", "escalated", "esc-closed")
+    # Escalations are addressed to the person: that is what escalating means here.
+    e1 = write("code", "code", "owner", "-", "escalated", "esc-live")
+    e2 = write("code", "code", "owner", "-", "escalated", "esc-closed")
     d1 = write("cowork", "owner", "both", e2, "settled", "decision-closing-esc")
     d2 = write("code", "owner", "both", "-", "settled", "decision-standalone")
     c2 = write("cowork", "cowork", "code", "-", "consensus", "note")
+    # The common case, and the one the fixture was missing: an agent has prepared
+    # something and needs the person. `to: owner` + `state: open`, exactly as the
+    # bootstrap prompts prescribe. A day of real use produced three of these and zero
+    # escalations, and the documented person-facing query looked only at escalations.
+    w1 = write("code", "code", "owner", "-", "open", "block-awaiting-you")
 
     return {
-        "open": {q1, q2, q3},                       # q4 is answered by a later re:
+        "open": {q1, q2, q3, w1},                   # q4 is answered by a later re:
         "escalated": {e1},                          # e2 is closed by an owner decision
+        "waiting": {e1, w1},                        # addressed to the person, unanswered
         "owner": {d1, d2},
         "consensus": {c1, c2},
         "listing": {p.name for p in ch.iterdir()},  # messages plus the two copied docs
@@ -189,7 +196,7 @@ def build_fixture(ch: Path, tmp: Path) -> dict[str, set[str]]:
 # the writer block in message-template.md contains `re: $RE` inside its heredoc, and a
 # looser test read that as a query with no ground truth -- an instrument reporting a
 # finding about the very command it depends on.
-KEY_GREP = re.compile(r"grep [^\n]*'\^(state|from|re): ?\+?")
+KEY_GREP = re.compile(r"grep [^\n]*'\^(state|from|re|to): ?\+?")
 BARE_LS = re.compile(r"(^|\n)\s*ls -1(\s*\||\s*$)")
 
 
@@ -208,6 +215,8 @@ def classify(unit: str) -> str | None:
     colliding; extending it to prose is what made it fire on a sentence.
     """
     unit = re.sub(r"#.*$", "", unit, flags=re.M)
+    if "to: +(owner|both)" in unit or "to: +owner" in unit:
+        return "waiting"
     if "state: +escalated" in unit or "state: escalated" in unit:
         return "escalated"
     if "state: +open" in unit or "state: open" in unit:

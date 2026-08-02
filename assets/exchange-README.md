@@ -67,23 +67,44 @@ These are not one-liners, and that is the point: because files are immutable, an
 still says `state: open` for ever. A bare `grep -E '^state: +open$'` returns *every question ever
 asked*.
 
+**They declare what they examined and refuse to answer over nothing** — zero results from the
+wrong directory looks exactly like a healthy channel, and that is not an approval:
+
+```sh
+n=$(ls -1 *.md 2>/dev/null | wc -l)
+[ "$n" -eq 0 ] && { echo "BLIND: no messages here. Wrong directory, or no channel yet." >&2; exit 2; }
+echo "EXAMINED: $n messages"
+```
+
 ```sh
 # Open questions: state: open, minus anything a later message answers.
 answered=$(grep -hE '^re: +' *.md | awk '{print $2}' | grep -v '^-$' | sort -u)
 for f in $(grep -lE '^state: +open$' *.md); do
   echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
 done
+```
 
-# What the person needs to look at: escalations nothing has closed.
-closed=$(grep -lE '^from: +owner$' *.md | xargs -r grep -hE '^re: +' | awk '{print $2}' | sort -u)
-for f in $(grep -lE '^state: +escalated$' *.md); do
-  echo "$closed" | grep -qx "$(basename "$f")" || echo "$f"
+```sh
+# What waits on the person: anything addressed to them that nothing has answered.
+answered=$(grep -hE '^re: +' *.md | awk '{print $2}' | grep -v '^-$' | sort -u)
+for f in $(grep -lE '^to: +(owner|both)$' *.md); do
+  grep -qE '^state: +(open|escalated)$' "$f" || continue
+  echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
 done
+```
 
+```sh
 grep -lE '^from: +owner$' *.md     # every decision the person has made
+```
 
+```sh
 ls -1 | tail -20                   # the last twenty messages, in order
 ```
+
+**Not `escalated` alone.** Two agents that exchange facts instead of escalating produce almost no
+escalations — a full day of real use produced zero, while three messages addressed to the person
+sat unanswered, one of them a red command block. A query restricted to escalations returns nothing
+all day, and nothing reads as *nothing needs you*.
 
 An escalation is closed by a message `from: owner` whose `re:` points at it.
 

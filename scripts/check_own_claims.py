@@ -163,12 +163,31 @@ def claim_core_is_agnostic(docs: list[Path]) -> list[str]:
     return bad
 
 
+def claim_queries_declare_scope(docs: list[Path]) -> list[str]:
+    """Every document that carries channel queries also carries the scope declaration.
+
+    §1 says a check refuses to approve over an empty input, and `approvals.md` Part 4
+    already demands a probe of the reporting command. The channel queries -- the ones an
+    agent runs first, every session -- were the instrument without it: run from the wrong
+    directory they return zero, which is what a healthy quiet channel returns too.
+    """
+    bad = []
+    for p in docs:
+        t = p.read_text()
+        if "^state: +open$" not in t:
+            continue
+        if "BLIND: no messages here" not in t:
+            bad.append(f"{p.name} documents channel queries and never declares their scope")
+    return bad
+
+
 CLAIMS = [
     ("every head: example carries its kind", claim_head_prefix),
     ("every level enumeration lists all four", claim_four_levels),
     ("NOT APPLICABLE always carries its reason", claim_reason_is_part_of_the_value),
     ("a quantity written twice agrees with itself", claim_counts_agree),
     ("the daily triage needs no repository", claim_core_is_agnostic),
+    ("channel queries refuse to answer over nothing", claim_queries_declare_scope),
 ]
 
 
@@ -195,6 +214,8 @@ def self_test() -> int:
         ("the daily triage needs no repository",
          "reference/approvals.md", lambda t: t.replace("## Part 3 · The daily triage",
              "## Part 3 · The daily triage\n\nSaving a commit on a branch is amber.", 1)),
+        ("channel queries refuse to answer over nothing",
+         "reference/protocol.md", lambda t: t.replace("BLIND: no messages here", "quiet", 1)),
     ]
     ok = True
     with tempfile.TemporaryDirectory() as tmp:

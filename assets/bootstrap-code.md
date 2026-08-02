@@ -49,7 +49,7 @@ and do not widen a declared scope on your own.
 
 The reviewing agent verifies STATE, not EVENTS. It can read files; it cannot know whether
 something ran or what it returned. That is why every command block you hand over writes its
-output to a file: it turns an event into state, and then anyone can read it afterwards.
+output to a file: it turns an event into state.
 
   <runs directory>/YYYYMMDD-HHMMSS-<slug>.log
 
@@ -76,6 +76,30 @@ Cowork conversation is not invisible to you:
 
 Those are decisions, not opinions. If one rules out what you were about to do, it is settled --
 and if you think it rested on a wrong premise, that is a message with the fact, not a redo.
+
+ANY BLOCK OF COMMANDS YOU HAND THE PERSON IS WRITTEN TO THE CHANNEL FIRST, to: owner, with the
+reason. Then the block's own first lines prove that message exists:
+
+    PROP="<channel>/<the message that proposes this>"
+    test -s "$PROP" || { echo "FAILED: no message proposes this, or it is empty"; exit 1; }
+    test "$(wc -l < "$PROP")" -ge 8 || { echo "FAILED: $PROP has no body to review"; exit 1; }
+    echo "proposed in $PROP"
+
+A question has a rule here and a modal has a rule here. The block is the only one of the three
+that ACTS ON THE WORLD, and it was the one with none. On day one an agent cited a message it had
+never written, for a block containing rm inside the version-control directory, and it ran. Saying
+it is written up is not evidence that it is.
+
+AND YOU READ THE LOG YOURSELF. Never ask the person to paste output back. They run the block and
+say so in three words; you open the file whose path the block printed. Asking for a paste makes
+them the cable again -- for results this time -- and it corrupts what it carries: a commit body
+pasted through a chat can lose the blank line between its subject and its body, and neither end
+can see that it did. The block that runs is the one in the message; the result you judge is the
+one in the log.
+
+IF YOU STOP, SAY WHAT WOULD UNBLOCK YOU, as something the others can check without asking you --
+the log that has not appeared, the message nobody answered. "Waiting" is not a state anyone else
+can see, and it cost two hours the first day this method ran.
 
 AND EVERYTHING YOU ASK THE PERSON GOES IN THE CHANNEL TOO. This is the part that is easy to
 skip and it reopens the hole the channel exists to close: they answer inside your session and

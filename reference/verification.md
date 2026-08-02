@@ -46,6 +46,10 @@ Two cautions, both learned the expensive way:
 - **Check the return code, not the output.** A verifier that fails to start prints nothing and
   returns a code nobody read; empty output is indistinguishable from success to anyone reading
   text.
+- **And a message naming an outcome is tied to the code that produced it, never printed beside
+  it.** `echo "exit=$?  lock removed"` prints *removed* whatever happened, and somebody skimming a
+  recovery log reads the word and not the number. Measured on a real recovery: the line said
+  `exit=1  lock removed`, and the two halves disagreed.
 - **Breaking it on purpose requires guessing the failure mode correctly. Declaring what it
   examined protects you even when you guess wrong.** Of the two habits, the second is primary —
   it was discovered by the first one failing.
@@ -70,6 +74,19 @@ Five rules, each from a case where the arithmetic was right and the object was w
 5. **A hand-written list of terms measures whoever wrote it, not the project.** To size
    something, enumerate the project and classify; the list is only useful for prioritising inside
    what is already enumerated.
+
+### A count and its own enumeration are two claims, and they drift
+
+When a sentence gives a number and then lists the things, **the list is the measurement and the
+number is a recollection.** Count the list.
+
+This failed three times in one day on the project this method came from, and in both directions:
+*"four sections"* enumerating five, *"seven executable lines (24-30, 46)"* which are eight,
+*"three locks"* which were two. Twice over and once under, so it does not even have a constant
+bias — which rules out the comforting explanation that somebody is systematically optimistic.
+
+It is the same shape as comparing totals instead of sets, moved from a check into a sentence. The
+check has the rule; prose had none, and prose is what people read.
 
 ## 4 · Scope
 
@@ -304,8 +321,21 @@ Four rules about the content:
 3. **The header declares what it ran against** — the version, the branch, whatever identifies the
    state. A record that does not say what it ran against cannot be judged still valid, and a
    figure measured before the project moved looks exactly like a current one.
-4. **The block ends by printing the path of its own log**, so it can be named without hunting for
-   it.
+4. **The block ends by printing the path of its own log — and the agent that wrote the block is
+   the one that reads it.** Nobody hands the output to anybody. A person asked to paste output
+   back has been made the transport again, this time for results instead of for questions, and
+   this method opens by naming that as the failure it exists to remove.
+
+   It is not only friction. **What travels through a chat is altered by it:** a commit body pasted
+   between two sessions can lose the blank line separating its subject from its body, and neither
+   end can tell — it was nearly reported as a defect that did not exist, and in the other direction
+   it would have been approved malformed. The block that runs is the one in the message; the result
+   that gets judged is the one in the log. A chat is a rendering of both.
+
+   **The two exceptions are the ones where no log exists to read**, and they are exceptions rather
+   than the pattern: an install verdict and a permission rule's refusal both happen outside the
+   project and come back once, in an interface. Those get pasted verbatim onto a line the block
+   left blank — see §12. Everything else, the agent opens itself.
 
 And one rule about the directory: **it is raw, unsanitised output by design.** It is where a real
 value lands if one is ever printed. It never gets shared, published or committed, and nothing
