@@ -16,4 +16,7 @@ __pycache__/
 # who lands on them mistakes them for documentation of the skill.
 #
 # They stay on disk. Nothing here is deleted, and the next round still reads them.
-docs-review-*
+# The pattern is `docs-*` and not `docs-review-*`, because the second one was written
+# against the files that existed at the time and the next three were called something
+# else. A list written from what is in front of you measures what was in front of you.
+docs-*

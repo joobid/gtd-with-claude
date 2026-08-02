@@ -2,7 +2,7 @@
 name: gtd-with-agents
 description: Set up and run the three-party working method for a project driven by Claude Code and Claude Cowork together — a file-based channel the two agents use to talk to each other, an explicit delegation contract that records what the person decides and what they hand over, and the verification culture that makes agreement between two agents worth anything. Use this whenever someone is starting a project with both Claude Code and Cowork, asks how the two should coordinate, says they are tired of copying questions from one session and pasting answers into the other, asks "who decides what here", "how do I stay informed without approving everything", "how much can I delegate", or wants to install a working agreement, an exchange channel, or an approval policy between agents. Also use when a session arrives cold at a project that already has this method installed and needs to pick it up.
 metadata:
-  version: 0.1.6
+  version: 0.1.7
 ---
 
 # Get Things Done with Claude
@@ -114,8 +114,17 @@ here; do not improvise a syntax.
   `verified` without one: a floor certification is an event, and an event with no artefact is an
   assertion.
 - Where no mechanism exists, say so: `none — agreement only`. Typically two of the four classes.
-- **`attempted, not verified` is the honest default**, not a lesser outcome. A class earns
-  `verified` only once the other-spelling request has been seen to refuse too.
+- **`attempted, not verified` is the honest default**, and on a first pass it is the **expected**
+  outcome — the other-spelling request is written to fail. A first exercise that ends there has
+  succeeded, and `verified` is a later, bounded claim about the spellings this project actually
+  produces.
+- **Two things the procedure will not survive without, and both were learned by running it:**
+  every request goes **twice**, bare and wrapped in whatever shape this project's commands
+  normally take — they answer differently, and the wrapped one is the real one. And **the person
+  records whether it prompted**, because an agent cannot tell *"ran without asking"* from
+  *"prompted, and they approved"*.
+- **Tell them what it costs before they start:** roughly fifteen minutes and five approvals if
+  nothing surprises anyone, an hour if something does.
 
 A floor that declares which of its four rows has teeth is honest. One that implies all four do is
 the thing this method exists to catch.

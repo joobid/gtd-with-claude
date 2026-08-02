@@ -296,6 +296,51 @@ remembered: it is narrow, it expires, and it is the only thing you have.
 
 ---
 
+## 13 · Write the prediction before you run the probe
+
+Everything above builds instruments. This one is about the only failure the instruments never
+caught.
+
+The first execution of the floor procedure produced nineteen observations and **five false
+conclusions** — plausible ones, stated with confidence, each of which would have gone into a
+report as a finding. *"In ten probes not one prompt appeared."* *"Two `ask` rules matched and
+nothing prompted."* Both were wrong for the same reason: the agent cannot see a prompt, so it read
+its own blindness as evidence of absence.
+
+**Not one of the five was caught by a check.** All five were caught by somebody looking again —
+four retracted by the agent that had written them, one by the reviewer. The verifiers, the
+self-tests, the declared scopes: none of them was pointed at this, because none of them can be.
+A conclusion is not an artefact.
+
+The one thing that did work, and it worked both times it was used:
+
+> **Before running a probe, write down what you expect it to show — and what result would mean
+> you were wrong.** Then run it.
+
+It costs a sentence, and it converts an observation into a test. Without the prediction, an
+ambiguous result gets read in whichever direction the reader already leaned, and the reading feels
+like observation rather than interpretation. With it, the ambiguity is visible: the result matches
+the prediction, contradicts it, or fits neither — and the third case is the one that produces the
+real finding.
+
+It also catches the specific shape above, which is the commonest. *"I expect no prompt"* is not a
+prediction an agent can test, because it cannot observe prompts. Writing it down forces the
+question *how would I see that?*, and the answer — **I would not, the person would** — arrives
+before the false conclusion instead of after it.
+
+### And the part that does not scale
+
+Say it plainly rather than end on the habit: **the control around the control is still that
+somebody takes it seriously.** Every mechanism in this document is a way of making that person's
+attention go further — declaring scope so a blind run is visible, breaking a verifier so a silent
+one is not trusted, naming the cheapest wrong thing so a lucky pass is caught. None of them
+replaces the attention; they concentrate it.
+
+That is the honest limit of this whole file, and knowing it is what keeps the rest useful. A
+method that claimed otherwise would be the phantom control it warns about, one level up.
+
+---
+
 ## Every command block leaves a record
 
 This is the mechanism that converts an event into state, and it is what lets the reviewing agent

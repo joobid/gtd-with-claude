@@ -42,7 +42,7 @@ makes the other two safe.
 
 | | Does | Never does |
 |---|---|---|
-| **Claude Code** | Implements. Runs the checks. Writes the command blocks you execute | Runs a destructive command without approval. Edits its own permission configuration. Widens its own scope |
+| **Claude Code** | Implements. Runs the checks. Writes the command blocks you execute — **and writes each one into the channel, with its reason, before offering it** | Runs a destructive command without approval. Edits its own permission configuration. Widens its own scope. Asks you to paste output back: it wrote the block, it reads the log |
 | **Claude Cowork** | Specifies, plans, reviews against the project files, makes small fixes | Answers a permission prompt — those are modal and no file reaches them |
 | **You** | Execute what only you can execute. Decide what the two cannot settle | Carry a question or an answer by hand. That is what the channel is for |
 
@@ -164,6 +164,27 @@ Filing them under your name is what makes every decision you have made findable 
 ```
 grep -lE '^from: +owner$' .runs/exchange/*.md
 ```
+
+And the other direction — **what is waiting on you right now** — is one command, and it is the
+one you will actually run:
+
+```
+cd .runs/exchange
+n=$(ls -1 *.md 2>/dev/null | wc -l)
+[ "$n" -eq 0 ] && { echo "BLIND: no messages here."; }
+answered=$(grep -hE '^re: +' *.md | awk '{print $2}' | grep -v '^-$' | sort -u)
+for f in $(grep -lE '^to: +(owner|both)$' *.md); do
+  grep -qE '^state: +(open|escalated)$' "$f" || continue
+  echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
+done
+```
+
+Note what it looks at. An earlier version asked only for **escalations**, and over a full working
+day of real use that returned **zero** — while three messages addressed to the person sat
+unanswered, one of them a command block containing `rm`. Escalations are rare *by design*, because
+this method spends its effort making two agents exchange facts instead of escalating. The better
+it works, the emptier that query gets, and its failure mode is returning nothing, which reads as
+*nothing needs you*.
 
 It applies to more than approvals: a preference, a constraint, a correction, a fact about your
 situation that neither agent could have known. The test is narrow — **would the other agent
@@ -332,6 +353,14 @@ afterwards. What the permissions block comes to you. The method changes what you
 often; it does not make you the sole executor, and a document claiming otherwise would be
 promising you a control you do not have.
 
+**A permission rule matches text, not intent, and a wrapped command is different text.** Measured
+on a real tool: a command that a `deny` rule refuses outright when sent alone **executed** when the
+same command travelled inside a logging block — the matcher decomposed a chain of `&&` and named
+the rule it used, and treated a brace group as opaque. Something still stopped and asked, but it
+asked about *syntax* rather than about deleting a directory, so the care that went into the rule
+never reached the person pressing the button. `floor-mechanism.md` says how to find out whether
+yours behaves this way, and it is the reason every request there is run twice.
+
 **It does not make two agents right.** It makes them exchange facts instead of opinions, which is
 better, and it makes their agreement mean something — but two agents can still be confidently
 wrong about the same thing, and the verification culture exists precisely because agreement alone
@@ -412,6 +441,14 @@ The single sharpest instance: a real identifier lived for five days **inside the
 meant to detect it**, because the only file that barrier skips by design is its own exemption. It
 was found by pointing the check at itself.
 
+**And it has since been used rather than only built.** A full day of running it end to end on a
+real project — two agents, a person, eleven channel messages, seventeen defects catalogued as they
+happened — tested every rule here against something that actually went wrong. Nine of the
+seventeen the method already prevented. The four it did not were one gap: it governed what the
+agents said to each other and what they asked the person, and **not what they handed her to
+execute** — the only one of the three that acts on the world. That gap is closed, and the way it
+was found is the only kind of evidence this document treats as worth much.
+
 ---
 
 ## What is in here
@@ -451,21 +488,22 @@ Everything else works on a thesis, a research project or a campaign as readily a
 
 ### Releases
 
-Tagging `v*` builds `gtd-with-agents.skill` and attaches it to the release. The pipeline will
-not publish a bundle it has not checked:
+Tagging `v*` builds `gtd-with-agents.skill` and attaches it to the release. **The pipeline will
+not publish a bundle it has not checked**, and what it checks falls into four kinds rather than a
+numbered list — the list is in `release.yml`, and a list maintained in two places goes stale in
+one of them:
 
-1. It **proves its own validator first** — one deliberate mutation per rule, and it fails unless
-   every one is rejected *and* the untouched skill is still accepted. The count lives in
-   `validate_skill.py`, not here: a figure maintained in two places goes stale in one of them
-2. It validates the source tree
-3. It checks `MANIFEST` in both directions — nothing listed is missing, nothing shippable is
-   unlisted
-4. It **runs the commands this documentation contains**, against a fixture channel with a known
-   answer, because a fenced block is a claim and two reviews found the costliest defects in
-   commands nobody had executed
-5. It builds the bundle and then checks **two different things about it**: what it *contains*
-   (extracted somewhere clean and put through the validator) and what it *is* (files only,
-   deflated, exactly the manifest, one root)
+- **Its own instruments, first.** Every checker is run against deliberate mutations and has to
+  reject each one *and* accept the untouched tree. A verifier never seen to fail is not evidence,
+  including these.
+- **The tree**: frontmatter rules, and `MANIFEST` in both directions — nothing listed is missing,
+  nothing shippable is unlisted.
+- **The claims, not only the artefact**: the commands this documentation contains are run against
+  a fixture with a known answer, and the statements the repository makes about itself are checked
+  against the documents that are supposed to follow them.
+- **The bundle, as two different objects**: what it *contains*, extracted somewhere clean and put
+  through the validator, and what it *is* — files only, deflated, exactly the manifest, one root,
+  and a declared version that matches the tag.
 
 **Step 5 is split in two because of a real failure.** `v0.1.1` shipped a bundle that every
 content check approved — the official skill validator said it was valid — and it would not
