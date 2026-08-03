@@ -127,9 +127,49 @@ not read cannot audit it — and the method promises to keep them informed.
 | | |
 |---|---|
 | `open` | A question. Nothing is agreed |
-| `consensus` | The two agents agree. **Only valid on a message whose `re:` points at a message from the other agent** |
-| `settled` | The person decided. No two agents, no exchange required. Not reopened |
+| `consensus` | The two agents agree. **Only valid on a message whose `re:` points at a message from the other agent.** Agreement, not execution — see below |
+| `settled` | The person decided, or the agreed thing is done. **The only state that closes anything** |
 | `escalated` | The disagreement survived the facts. It is a judgement call and it goes to the person |
+
+### `consensus` is agreed. It is not done, and closing is somebody's job
+
+**Nothing closes a message except a `settled` further down its own reply chain.** A thread that
+ends in agreement, with the work never carried out and no closing note written, stays pending —
+and that is correct, not a leak.
+
+This was a real defect and it was created by the fix for another one. While nothing read the
+channel automatically, `open` and `consensus` got the same amount of attention, which is to say
+none in particular, so conflating *agreed* with *agreed and done* cost nothing. The moment the
+per-turn notice started deriving pending work from `open|escalated`, `open` became the state that
+gets seen and `consensus` the state that does not. Agreed-and-unexecuted work went systematically
+invisible — **and it was the fix that made it invisible.** Measured on a 64-message channel: the
+old derivation surfaced 2 items where 4 were genuinely outstanding, and the one it hid longest was
+three agreed, unimplemented requirements of a privacy guard.
+
+There is a second, finer half. **Being answered is not being done.** The old criterion treated any
+later `re:` as closure, so a reply — even one that only asks something back — retired the message
+it replied to.
+
+So, two rules, and the second is what makes the first survive contact:
+
+- **Close what you finish.** When the agreed thing is done, write a `settled` and make its `re:`
+  name the message it closes.
+- **A `settled` closes exactly what its `re:` names, and nothing else.** On the real channel 9 of
+  24 settled messages carried `re: -`. That is not sloppiness — a decision recorded with
+  `from: owner` opens a topic rather than answering one — but it means those nine closed nothing,
+  and the four false positives in that measurement were all of this shape: the work was finished
+  and the closing note was written somewhere other than on the chain.
+
+**The noise is accepted on purpose.** In a check whose failure mode is silence, coverage beats
+precision. A false positive costs one line of context and is cleared by writing the `settled` that
+was missing, which is the behaviour the method wants anyway. The false negative it replaces hid a
+broken privacy control. They are not comparable, so they are not traded off as if they were.
+
+**And the tempting simplification is wrong, which was also measured.** Closing a whole *thread*
+once anything in it settles is cleaner and produced zero false positives on the same channel — and
+it lost one of the two messages the fix exists to surface, because a `settled` in that thread had
+closed a different item earlier. A thread here is a rolling conversation, not one topic. The
+criterion has to walk the reply chain.
 
 ### Why `consensus` needs `re:`
 
@@ -344,9 +384,14 @@ those are different things. Between *no push* and *the person has to mention it*
 and skipping it puts the cable back: a message written mid-milestone waits for somebody to bring
 it up.
 
-`assets/channel-status.sh` is that step. It derives exactly what the documented queries derive —
-addressed to me, still `open` or `escalated`, minus anything a later `re:` closes — and prints one
-short block, or nothing. **Read only.**
+`assets/channel-status.sh` is that step: addressed to me, not itself `settled`, and with no
+`settled` anywhere down its reply chain. One short block, or nothing. **Read only.**
+
+**It is deliberately broader than the `open` question query below.** That query answers *what is
+being asked*, which is a different thing from *what is outstanding*, and reading it as if it were
+the second is what made agreed-and-unexecuted work invisible for a whole working day. A message
+carrying `state: consensus` is agreed and not done, and the notice shows it until a `settled`
+names it.
 
 ### It is two pieces, and one of them alone does nothing
 

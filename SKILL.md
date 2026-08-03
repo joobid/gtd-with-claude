@@ -2,7 +2,7 @@
 name: gtd-with-agents
 description: Set up and run the three-party working method for a project driven by Claude Code and Claude Cowork together — a file-based channel the two agents use to talk to each other, an explicit delegation contract that records what the person decides and what they hand over, and the verification culture that makes agreement between two agents worth anything. Use this whenever someone is starting a project with both Claude Code and Cowork, asks how the two should coordinate, says they are tired of copying questions from one session and pasting answers into the other, asks "who decides what here", "how do I stay informed without approving everything", "how much can I delegate", or wants to install a working agreement, an exchange channel, or an approval policy between agents. Also use when a session arrives cold at a project that already has this method installed and needs to pick it up.
 metadata:
-  version: 0.2.1
+  version: 0.2.2
 ---
 
 # Get Things Done with Claude
@@ -210,11 +210,27 @@ the same shape as a permission rule the tool accepts and never evaluates.
 }
 ```
 
-3. **Check that the hook fires, not that the file exists.** Ask the person to type any prompt and
+3. **Check the derivation before checking the wiring**, because they fail differently and only
+   one of them is visible:
+
+   ```sh
+   <path>/channel-status.sh --selftest
+   ```
+
+   Six assertions over a synthetic channel built to contain the case this derivation exists for:
+   a thread both agents agreed on that nobody carried out. It runs in a scratch directory and
+   touches nothing of yours.
+4. **Check that the hook fires, not that the file exists.** Ask the person to type any prompt and
    report whether the notice appears. Two pieces means two ways to have done half the job, and
    both of them leave the script on disk looking installed.
-4. **Probe it against a channel with something in it.** Over an empty one it prints nothing and
+5. **Probe it against a channel with something in it.** Over an empty one it prints nothing and
    looks correct, which is the blind check this method exists to catch.
+
+**Say what will show up, or the first report will be a bug report.** The notice lists `consensus`
+alongside `open`, because agreed is not done and only a `settled` naming a message closes it. On a
+busy channel that means items both agents signed off on and neither finished. Some of them will be
+finished work whose closing note was written without a `re:` — one line of noise, cleared by
+writing the `settled` that names the file.
 
 Then record it in the configuration, including what it does **not** do: it fires when the person
 types, so a message written mid-milestone surfaces at the next turn rather than immediately, and

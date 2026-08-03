@@ -228,8 +228,14 @@ did not happen.
 nothing when there is nothing. It is what stops *"no file wakes anyone up"* from meaning *"the
 person has to remember"*.
 
+**It shows `consensus` as well as `open`, and that is the correction of a real defect.** Agreed is
+not done: only a `settled` further down a message's own reply chain closes it. Expect the list to
+include things both agents already signed off on and neither has carried out — that is what it is
+for.
+
 **The probe row is not paperwork.** Over an empty channel the script prints nothing and looks
-correct, so an installation confirmed against an empty channel has confirmed nothing.
+correct, so an installation confirmed against an empty channel has confirmed nothing. `--selftest`
+covers the derivation against a synthetic channel; the probe row covers *this* project's wiring.
 
 ## What this does not do
 

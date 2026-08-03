@@ -293,16 +293,23 @@ Because if nothing tells the other session a message has arrived, **you do.** Yo
 says "look at the channel", and that is the cable coming back in a smaller and more forgettable
 form: the transcription is gone, the remembering is not.
 
-So the skill ships `channel-status.sh`. It runs on every turn of a session, derives exactly what
-the queries above derive — addressed to me, still open, minus anything a later answer closes — and
-prints one short block:
+So the skill ships `channel-status.sh`. It runs on every turn of a session and prints one short
+block — everything addressed to you that no `settled` has closed:
 
 ```
-CHANNEL: 2 message(s) addressed to you that nothing has answered.
-  .runs/exchange/20260802-183209-cowork-scope-file-serialises.md
-  .runs/exchange/20260802-185550-cowork-startup-warnings.md
-Read them before proposing anything. Answer with re: pointing at the filename.
+CHANNEL: 3 message(s) addressed to you that nothing has closed.
+  open       .runs/exchange/20260802-183209-cowork-scope-file-serialises.md
+  consensus  .runs/exchange/20260802-185550-cowork-startup-warnings.md
+  open       .runs/exchange/20260802-215136-cowork-validate-the-letter.md
+An open one needs an answer. A consensus one is agreed and not yet done: do it, or
+close it with a settled whose re: names this file. Only settled closes anything.
 ```
+
+**`consensus` appears there on purpose, and it is the whole point.** Agreed is not done. The first
+version of this listed only `open`, which meant that the moment something got agreed it stopped
+being visible — so work both agents had signed off on and neither had carried out simply fell out
+of view. On a real 64-message channel that hid three agreed-and-unimplemented requirements of a
+privacy guard. It is cleared by finishing the thing and writing a `settled` that names it.
 
 **When there is nothing, it prints nothing.** It never writes. And what it buys you is one line
 long: you stop being the notification.
