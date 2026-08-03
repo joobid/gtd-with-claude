@@ -35,6 +35,7 @@ both can read it.
 |---|---|---|
 | Reviewing (`<tool>`) | `<yes / no>` | `<date>` |
 | Implementing (`<tool>`) | `<yes, at ~/.claude/skills / yes, at .claude/skills / no>` | `<date>` |
+| How it got there | `<unzipped from a release / cp -R from the plugin cache / other>` |
 
 **The column is called *self-reported* and not *observed*, and the word is the point.** Each agent
 can observe its own side and nothing else; the other row records what somebody said. A `yes`
@@ -187,12 +188,12 @@ day reads as *nothing needs you*.
 
 ```sh
 cd <channel> || exit 1
-n=$(ls -1 *.md 2>/dev/null | wc -l)
+n=$(ls -1 2*.md 2>/dev/null | wc -l)
 [ "$n" -eq 0 ] && { echo "BLIND: no messages here. Wrong directory, or no channel yet." >&2; exit 2; }
 echo "EXAMINED: $n messages"
 # What waits on the person: anything addressed to them that nothing has answered.
-answered=$(grep -hE '^re: +' *.md | awk '{print $2}' | grep -v '^-$' | sort -u)
-for f in $(grep -lE '^to: +(owner|both)$' *.md); do
+answered=$(grep -hE '^re: +' 2*.md | awk '{print $2}' | grep -v '^-$' | sort -u)
+for f in $(grep -lE '^to: +(owner|both)$' 2*.md); do
   grep -qE '^state: +(open|escalated)$' "$f" || continue
   echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
 done
@@ -215,8 +216,27 @@ did not happen.
 | `<e.g. plan or roadmap>` | `<path>` |
 | `<e.g. working rules>` | `<path>` |
 
+## Per-turn channel notice
+
+| | |
+|---|---|
+| Installed for | `<which agent, or none>` |
+| How it is wired | `<e.g. UserPromptSubmit hook in .claude/settings.json>` |
+| Probed against a non-empty channel | `<path to the run that named real messages / not yet>` |
+
+`assets/channel-status.sh` prints what the channel is holding for one agent, on every turn, and
+nothing when there is nothing. It is what stops *"no file wakes anyone up"* from meaning *"the
+person has to remember"*.
+
+**The probe row is not paperwork.** Over an empty channel the script prints nothing and looks
+correct, so an installation confirmed against an empty channel has confirmed nothing.
+
 ## What this does not do
 
 No file wakes anyone up, and the reviewing agent cannot answer a permission prompt — those are
 modal and live inside the other tool's interface. It does know one happened, because the channel
 records it. What disappears is the copying and the risk of transcription, not the turn-taking.
+
+With the per-turn notice above, one side is told automatically **when the person types**. A message
+written mid-milestone surfaces at that agent's next turn rather than immediately, and the other
+agent has no equivalent unless its tool offers one. Both limits go in the table, not in a footnote.

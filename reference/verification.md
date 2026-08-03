@@ -57,6 +57,30 @@ Two cautions, both learned the expensive way:
 **This applies to a verifier written in five minutes to confirm a fix.** Those are the ones that
 get believed without proof, because they feel like part of the fix rather than a new instrument.
 
+### And a verifier tested in the wrong environment is untested, whatever its positive control says
+
+**Measured, and it is the case that makes the rule.** A reviewing agent proposed an `awk` semantic
+check, exercised it against known positives, and got exit 0 over 264 files. The implementing agent
+ran the same script over the same tree and it **aborted on the third file** — a `.docx` the
+exclusion list did not cover — printing no findings at all. Wired like the checks around it, with
+`|| true`, that step would have gone green while examining three files.
+
+**Neither agent was careless, and the reviewer could not have found it from its own side.** Its
+`awk` was GNU awk, which tolerates invalid multibyte input. The implementer's was BWK awk, which
+does not. The positive control fired, correctly, and told nobody anything: **a control that fires
+in a working environment says nothing about a broken one.**
+
+The rule above is written about the *cases* a verifier must catch. Extend it to the *environment*:
+
+- **Test it where it runs.** If it runs in more than one place, test both, or pin the interpreter
+  and the locale so there is only one behaviour to reason about.
+- **A non-zero exit fails the job. Never `|| true`.** It is the only guard that holds for the
+  implementation nobody has looked at yet.
+
+And note which way the asymmetry ran here: the check lives in CI, where the tolerant `awk` runs,
+so the failure appears **only on a developer's machine**. Green in CI and silently dead locally is
+worse than red everywhere, because it teaches people to trust a green that measured three files.
+
 ## 3 · Measuring
 
 Five rules, each from a case where the arithmetic was right and the object was wrong.
@@ -119,6 +143,25 @@ against. A count without a version attached is a count you cannot date.
 **And it applies to generated values too.** A timestamp typed from memory instead of read from
 the clock, an identifier written from recall instead of resolved, are asserted values in the one
 place nobody inspects — because a filename or a metadata line does not look like a claim.
+
+### An agent cannot observe its own start time
+
+The state/events frontier is usually pointed at the *other* agent. Point it at yourself: **there
+is one event about your own process that you cannot observe, and it is when it began.**
+
+Resuming a session appends to the existing conversation, so the context spans the restart and
+nothing in it marks the process boundary. The transcript is continuous because, as a conversation,
+it is.
+
+**Measured.** An implementing agent recorded a probe as INCONCLUSIVE on the stated grounds that
+*"this session predates the configuration edit"*. It did not: the startup warnings it had itself
+printed named rules that only existed after that edit, and the modal it triggered cited one of them
+by name. The log was honest and the header was wrong, which is the worst combination to catch from
+inside.
+
+**When a measurement depends on when your process started, do not assert it.** Read something the
+restart would have changed, or ask the person. It is one line, and it converts a null result into a
+positive one.
 
 ## 5 · Before trusting a control, check that it exists
 
@@ -376,6 +419,17 @@ Four rules about the content:
    end can tell — it was nearly reported as a defect that did not exist, and in the other direction
    it would have been approved malformed. The block that runs is the one in the message; the result
    that gets judged is the one in the log. A chat is a rendering of both.
+
+   **And it runs both ways, which only one direction said.** *"Do not ask them to paste output
+   back"* covers results travelling **toward** an agent. Nothing covered a summary handed to the
+   person to carry **forward**, and that is the one an agent produces while trying to be helpful.
+   Measured: after an afternoon spent installing the channel, a reviewing agent handed the person a
+   block to paste into the other session, summarising a message already sitting complete in the
+   channel. The person refused it, correctly. **Never hand the person a message to relay** — what
+   reaches the other agent is a channel message, complete and standing alone, and what the person
+   types carries no content. The tell is that the summary looks *useful*: shorter than the message,
+   shaped to what they would want. That is precisely what makes it a second, lossy copy of
+   something that already existed, with the person carrying it.
 
    **The two exceptions are the ones where no log exists to read**, and they are exceptions rather
    than the pattern: an install verdict and a permission rule's refusal both happen outside the

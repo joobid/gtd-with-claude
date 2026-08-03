@@ -105,12 +105,24 @@ said they had in fact seen prompts.
 
 | # | Ask for | A working floor does | Tests |
 |---|---|---|---|
+| 0 | **Nothing. Read the tool's startup output** after writing the rules | Names no rule of yours | That every rule you wrote is **alive**. Costs nothing, consumes none of the requests, and is the only check here that finds a rule which is not too narrow but entirely inert |
 | 1 | A destructive command your rules deny | Refuses outright, no prompt | That a **command** rule matches |
 | 2 | A read of a path your rules deny | Refuses outright | That a **path** rule matches — a different rule kind, and usually the one protecting real data. **The file has to exist**: over a missing path, *"I cannot show you that"* is indistinguishable from *"there is nothing there"* |
 | 3 | **The same operation as 1, spelled differently** — flags reordered, short flags split, long flags instead | Refuses outright | That the rule covers the **operation**, not one spelling of it |
 | 4 | A command you have **deliberately granted a standing approval for**, and which your rules also mark as needing a prompt | **Asks anyway** | That a prompt beats a permission. **Plant the approval first** — on a machine with nothing accumulated this row asks for the trivial reason and proves nothing |
 | 5 | Something harmless — printing a word | Runs without asking | Control for `allow` **only**. It passes on a machine with no configuration at all, so it cannot tell you that `deny` or `ask` loaded. Rows 1 and 4 establish those; this one only rules out the case where nothing whatever is in force |
 | 6 | **Nothing. Say out loud which classes you did not test and cannot test** | — | That the exercise covered half the floor. Five requests exercise the two nameable classes; spending and messages typed into a web interface get none, and the person is about to decide how much to trust the result |
+
+**Row 2 assumes a path worth denying, and some projects have none.** Where the work itself *is*
+reading the real data — a bookkeeping project whose client profiles are required reading — a path
+deny would break the work rather than protect it. That is not a misconfiguration. The risk moves:
+it is not reading the value, it is the value **reaching the shared history**.
+
+Say so, run row 2 **expecting it not to refuse**, record `none — agreement only` for that class,
+and name the mechanism that does apply — ignore rules plus whatever blocks the publish — with its
+own verification state. A class whose real mechanism lives somewhere else is still owed an honest
+row. And note what it costs: this page claims real data has *"the stronger of the two kinds"* of
+rule, and that claim is void for exactly these projects.
 
 **Rows 1 and 3 act on the same object and row 1 goes first**, so a row 1 that executes destroys
 what row 3 was going to measure. Give each row its own target, or regenerate it in between and
@@ -156,6 +168,8 @@ LOG=".runs/$(date -u +%Y%m%d-%H%M%S)-floor-verification.log"
   echo
   echo "shape: bare | wrapped   <- run each request in BOTH, they answer differently"
   echo
+  echo "0 startup output   · expects: names no rule of yours"
+  echo "  outcome:"
   for r in "1 denied command   · expects: refuses outright" \
            "2 denied path      · expects: refuses outright" \
            "3 other spelling   · expects: refuses outright" \
@@ -305,11 +319,15 @@ what row 4 of Step 3 exists to confirm rather than assume.
 {
   "permissions": {
     "deny": [
-      "Read(./private/**)", "Edit(./private/**)", "Write(./private/**)",
+      "Read(./private/**)", "Edit(./private/**)",
+      "Edit(./.runs/exchange/**)",
       "Bash(git push --force)", "Bash(git push --force *)", "Bash(git push -f*)",
       "Bash(git filter-branch*)", "Bash(git filter-repo*)",
       "Bash(rm -rf *)", "Bash(rm -fr *)", "Bash(rm -r -f *)",
       "Bash(find * -delete*)", "Bash(find * -exec*)"
+    ],
+    "allow": [
+      "Edit(./.runs/*.log)"
     ],
     "ask": [
       "Bash(rm *)", "Bash(xargs*)", "Bash(watch*)", "Bash(eval*)",
@@ -324,6 +342,41 @@ Replace `./private/**` with whatever holds real data in your project. Note `Bash
 underneath the specific denies: that is the shape to copy — **deny the spellings you know, and put
 the whole operation behind a prompt so an unlisted spelling still stops.** It is the only defence
 against the table above that does not depend on having thought of every flag order.
+
+### `Write(path)` is accepted and evaluates nothing
+
+There used to be a `Write(./private/**)` in that list, in the same triple as `Read` and `Edit`, and
+**it was inert**. File permission checks match `Edit(path)` only, and `Edit` already covers every
+file-editing tool, so the third member of the triple is dead weight that reads as protection.
+
+Measured: three such rules sat in a configuration written by following this very procedure, valid
+JSON, present in the file, evaluating nothing. **The only thing that caught them was the tool's own
+startup output**, which named them one by one and said what to use instead.
+
+So the procedure gains a **row 0**, before the five requests: **read the startup output after every
+configuration change.** It costs nothing, it consumes none of the ten requests, and it is the only
+verifier here that finds a rule which is not merely too narrow but entirely dead.
+
+### The two rules the channel needs, and their criteria are opposite
+
+The channel's immutability is the most central rule this method has, and until it was written down
+here it was a promise. `protocol.md` is categorical — *"nothing here is ever reopened: a correction
+is a new file that answers the old one"* — and explains that a rewritable message is a record that
+can lose most of itself without anyone seeing, because the tools that watch a project watch *which*
+files changed and not how much of each. Then it left it as doctrine, which is the exact shape this
+file exists to distrust.
+
+```
+deny:  Edit(<channel>/**)     messages are immutable
+allow: Edit(<runs>/*.log)     logs are meant to be filled in
+```
+
+Two kinds of file living side by side with **opposite** rules, so a single blanket rule over the
+run directory gets one of them wrong.
+
+The deny **does not block writing messages.** They are created through shell redirection by
+`gtd-msg.sh`, which passes through command rules rather than file permission checks. What it blocks
+is reopening one, which is the thing that was never impossible before.
 
 ### The one carve-out worth knowing
 

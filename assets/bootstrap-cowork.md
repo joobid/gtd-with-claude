@@ -59,11 +59,11 @@ the person. Nothing else in this prompt surfaces it, and an escalation nobody lo
 failure this whole method exists to prevent.
 
   cd <channel> || exit 1
-  n=$(ls -1 *.md 2>/dev/null | wc -l)
+  n=$(ls -1 2*.md 2>/dev/null | wc -l)
   [ "$n" -eq 0 ] && { echo "BLIND: no messages here. Wrong directory, or no channel yet."; exit 2; }
   echo "EXAMINED: $n messages"
-  answered=$(grep -hE '^re: +' *.md | awk '{print $2}' | grep -v '^-$' | sort -u)
-  for f in $(grep -lE '^to: +(owner|both)$' *.md); do
+  answered=$(grep -hE '^re: +' 2*.md | awk '{print $2}' | grep -v '^-$' | sort -u)
+  for f in $(grep -lE '^to: +(owner|both)$' 2*.md); do
     grep -qE '^state: +(open|escalated)$' "$f" || continue
     echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
   done
@@ -95,6 +95,16 @@ that changes what gets done, goes in the channel the same way. The test is narro
 OTHER AGENT BEHAVE DIFFERENTLY IF IT KNEW THIS? Say so when an answer diverges from the
 configuration -- that is the signal the configuration is wrong, and nobody notices it because
 each individual answer feels reasonable.
+
+NEVER HAND THE PERSON A MESSAGE TO RELAY. If the other agent needs to know something, it goes to
+the channel complete, and what the person types carries no content -- a single word is enough to
+surface it. The tell is that your summary looks useful: shorter than the message, shaped to what
+they would want. That is what makes it a second lossy copy of something that already exists, with
+them carrying it. It happened here, on the afternoon the channel was installed.
+
+AND ANY QUESTION WITH DRAFTED OPTIONS goes to the channel before you put it to them, exactly like a
+red block. A block acts; drafted options are pure interpretation, and the one they choose becomes a
+decision nobody reopens.
 
 WHEN YOU DISAGREE with the implementing agent, do not escalate. Exchange until one of you is shown
 a fact with the command that produced it. Only what survives goes to the person, marked

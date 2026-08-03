@@ -7,6 +7,63 @@ Installable as a skill. Everything it installs is plain files.
 
 ---
 
+## Install it
+
+**The two agents read skills from different places, so install it twice.** They are separate
+stores, not one shared library: a skill saved into your Claude profile does not appear on the
+Claude Code filesystem, and the other way round.
+
+**Cowork.** Download `gtd-with-agents.skill` from the [latest release](../../releases/latest) and
+open it. The file card has a **Save skill** button.
+
+**Claude Code.** Unpack the same bundle into a skills directory. **Pick one of these two** — the
+choice is about reach, not about the method.
+
+Every project of yours:
+
+```sh
+mkdir -p ~/.claude/skills
+unzip -q gtd-with-agents.skill -d ~/.claude/skills
+```
+
+Or this project only, shared with whoever has the repository:
+
+```sh
+mkdir -p .claude/skills
+unzip -q gtd-with-agents.skill -d .claude/skills
+```
+
+**In a Cowork session there is no `.skill` file to unzip.** The skill lives there as a directory in
+a plugin cache, under a temporary path that gets regenerated, so it has to be located rather than
+remembered:
+
+```sh
+SRC=$(find /var/folders -type d -name gtd-with-agents 2>/dev/null | head -1)
+mkdir -p .claude/skills && cp -R "$SRC" .claude/skills/
+```
+
+Confirm it landed as `<dir>/gtd-with-agents/SKILL.md`. The bundle carries its own folder, so
+unzipping *into* the skills directory is correct and unzipping into a subfolder nests it one level
+too deep. Then `/gtd-with-agents` exists in a new session.
+
+**Then open a Cowork session in the project and ask for it:**
+
+> *"Set up the working method for this project — Claude Code and Cowork together."*
+
+It asks, in this order: the language you want to be addressed in, the delegation questionnaire, and
+where the channel should live. Then it writes `gtd-config.md`, creates the channel, installs the
+message writer and the per-turn notice, and hands you two startup prompts — written into the
+project as files, because a prompt you need every time a session opens cannot live in a chat
+message that scrolls away.
+
+That is the whole installation. Everything it creates is a plain file you can read and change.
+
+> **Why Claude Code needs the skill and not just the startup prompt.** The prompt tells it what to
+> do; the skill is what lets it *re-read the protocol* when a question comes up months later. A
+> prompt is prose citing identifiers, and prose citing identifiers decays.
+
+---
+
 ## The problem it solves
 
 When you run two Claude sessions on the same project, they cannot talk to each other. So you do
@@ -137,6 +194,14 @@ message stamped a few minutes ahead sorts in front of the answer that replies to
 directory is no longer ordered, which is the only property the design leans on. This rule exists
 because it happened on the first day the channel was used.
 
+**Which is why the writer ships as a script and not as a block to type.** Building the filename by
+substitution and feeding a heredoc is a shape no permission pattern can cover — *"contains shell
+syntax that cannot be statically analyzed"* — so the most frequent operation in the whole method
+prompted for approval **every single time**, and the only relief on offer was the standing approval
+this method spends a page warning against. A named entry point is allowed once and is reviewable in
+the repository. Four rules that used to be memory are now refusals: the vocabularies, `consensus`
+without `re:`, the same-second collision guard, and reading `head:` from its source.
+
 ### What you are asked goes in the channel too
 
 Not only agent-to-agent traffic — and this is the part that is easy to leave out.
@@ -170,10 +235,10 @@ one you will actually run:
 
 ```
 cd .runs/exchange
-n=$(ls -1 *.md 2>/dev/null | wc -l)
+n=$(ls -1 2*.md 2>/dev/null | wc -l)
 [ "$n" -eq 0 ] && { echo "BLIND: no messages here."; }
-answered=$(grep -hE '^re: +' *.md | awk '{print $2}' | grep -v '^-$' | sort -u)
-for f in $(grep -lE '^to: +(owner|both)$' *.md); do
+answered=$(grep -hE '^re: +' 2*.md | awk '{print $2}' | grep -v '^-$' | sort -u)
+for f in $(grep -lE '^to: +(owner|both)$' 2*.md); do
   grep -qE '^state: +(open|escalated)$' "$f" || continue
   echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
 done
@@ -193,6 +258,44 @@ behave differently if it knew this?**
 And when your answer diverges from what you configured, the record says so. Someone deciding
 something they had delegated is information that the configuration is wrong, and it is exactly
 what nobody notices, because each individual answer feels reasonable at the time.
+
+### The sessions get told, so you do not have to remember
+
+There is a sentence this method got half right for a while: *"no file wakes anyone up"*. True about
+notifications, and it was being read as true about **attention**, which is not the same thing.
+
+Because if nothing tells the other session a message has arrived, **you do.** You are the one who
+says "look at the channel", and that is the cable coming back in a smaller and more forgettable
+form: the transcription is gone, the remembering is not.
+
+So the skill ships `channel-status.sh`. It runs on every turn of a session, derives exactly what
+the queries above derive — addressed to me, still open, minus anything a later answer closes — and
+prints one short block:
+
+```
+CHANNEL: 2 message(s) addressed to you that nothing has answered.
+  .runs/exchange/20260802-183209-cowork-scope-file-serialises.md
+  .runs/exchange/20260802-185550-cowork-startup-warnings.md
+Read them before proposing anything. Answer with re: pointing at the filename.
+```
+
+**When there is nothing, it prints nothing.** It never writes. And what it buys you is one line
+long: you stop being the notification.
+
+**It is two pieces and one alone does nothing** — the script, and the registration that makes the
+tool run it. In Claude Code that is a `UserPromptSubmit` hook with an explicit `timeout`, because
+the default is thirty seconds and **a hook that times out discards its output in silence**. Setup
+writes both, and the check is that **the hook fires** — type anything and see whether the notice
+appears — not that the file is on disk. An executable asset with no registration is a file that
+never runs, which is the same shape as a permission rule the tool accepts and never evaluates.
+
+Two things it does not do, said here rather than discovered later:
+
+- It fires **when you type**. A message written while the other agent is mid-milestone surfaces at
+  its next turn, not the instant it lands. The gain is from *"you must remember"* to *"the session
+  is told"*, which is real and is not a push notification.
+- It covers **one side**. Whichever agent runs in a tool without a per-turn hook has no equivalent,
+  and that asymmetry belongs in your configuration rather than in your assumptions.
 
 **The channel is not the record.** It holds the deliberation. Any consensus that changes a plan,
 a guide, an interface or a scope lands in a permanent project file in the same milestone, or it
@@ -230,6 +333,22 @@ without its cost is a default with a label on it:
 Ask to delegate one of these and the skill refuses, and offers the nearest safe thing instead:
 **the agents prepare it completely and you confirm in one step.**
 
+### Two rules that make the channel's own promise real
+
+*"Nothing here is ever reopened"* was doctrine with nothing behind it until this round. An agent
+that reopens a message can lose most of the record and nothing notices, because the tools that
+watch a project watch *which* files changed and not how much of each. One rule turns that sentence
+into a refusal, and its neighbour has the **opposite** criterion:
+
+```
+deny:  Edit(<channel>/**)     messages are immutable
+allow: Edit(<runs>/*.log)     logs are meant to be filled in
+```
+
+Two kinds of file side by side, so a single blanket rule over the run directory gets one of them
+wrong. And the deny does not block *writing* messages: those go through the script, which passes
+command rules rather than file checks.
+
 ### And what the floor actually is, said plainly
 
 **It is a commitment, not a lock.** These four rows are a rule read by the agent they restrict, and
@@ -247,57 +366,6 @@ which is agreement only.
 
 A floor that says which of its rows can actually block is honest. One that implies all four can is
 the thing this method exists to catch.
-
----
-
-## Install and start
-
-**The two agents read skills from different places, so install it twice.** They are separate
-stores, not one shared library — a skill saved into your Claude profile does not appear on the
-Claude Code filesystem, and vice versa.
-
-**1a. Cowork.** Download `gtd-with-agents.skill` from the
-[latest release](../../releases/latest) and open it — the file card has a **Save skill** button.
-
-**1b. Claude Code.** Unpack the same bundle into a skills directory. **Pick one of these two** —
-the choice is about reach, not about the method.
-
-Every project of yours:
-
-```sh
-mkdir -p ~/.claude/skills
-unzip -q gtd-with-agents.skill -d ~/.claude/skills
-```
-
-Or this project only, shared with whoever has the repository:
-
-```sh
-mkdir -p .claude/skills
-unzip -q gtd-with-agents.skill -d .claude/skills
-```
-
-Confirm it landed as `<dir>/gtd-with-agents/SKILL.md` — the bundle carries its own folder, so
-unzipping *into* the skills directory is correct and unzipping into a subfolder nests it one level
-too deep. Then `/gtd-with-agents` exists in a new session.
-
-> **Why Claude Code needs it and not just the paste-prompt.** The bootstrap prompt tells it what
-> to do; the skill is what lets it *re-read the protocol* when a question comes up months later.
-> A prompt is prose citing identifiers, and prose citing identifiers decays. This is the same
-> reason setup copies two files into the channel itself.
-
-**2. Open a Cowork session in the project and ask for it.**
-
-> *"Set up the working method for this project — Claude Code and Cowork together."*
-
-It will ask, in this order: the language you want to be addressed in, the delegation
-questionnaire, and where the channel should live. Then it writes `gtd-config.md`, creates the
-channel with its own README inside, and hands you two prompts.
-
-**3. Paste the prompts.** Setup writes them into the project as `gtd-bootstrap-code.md` and
-`gtd-bootstrap-cowork.md`, filled in with your real paths — not only into the chat, because a
-prompt you need every time a session opens cannot live in a message that scrolls away.
-
-That is the whole installation. Everything it created is a plain file you can read and change.
 
 ---
 
@@ -464,7 +532,9 @@ reference/
   git-annex.md           only what depends on having a repository
 assets/
   exchange-README.md     copied into the channel
-  message-template.md    including the command that reads the clock
+  message-template.md    how to call the writer, and what it enforces
+  gtd-msg.sh             the writer itself, executable
+  channel-status.sh      the per-turn notice, read only
   bootstrap-code.md      startup prompt for Claude Code
   bootstrap-cowork.md    startup prompt for a cold Cowork session
   config-template.md     where the chosen configuration is written
@@ -505,7 +575,7 @@ one of them:
   through the validator, and what it *is* — files only, deflated, exactly the manifest, one root,
   and a declared version that matches the tag.
 
-**Step 5 is split in two because of a real failure.** `v0.1.1` shipped a bundle that every
+**The last of the four is split in two because of a real failure.** `v0.1.1` shipped a bundle that every
 content check approved — the official skill validator said it was valid — and it would not
 install. The archive had been built with `zip -r`, which emits directory entries and mixes
 compression; nothing here had ever looked at the archive as an object rather than as a

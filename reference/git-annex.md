@@ -89,6 +89,26 @@ This is on the floor and stays there. Two additions specific to repositories:
 - **It needs confirmation that nobody else has copied the repository.** That is a question only
   the person can answer, which is why it cannot be delegated regardless of preference.
 
+## What else lands in `.claude/` and gets committed by accident
+
+A project-scope install of this skill puts **thirteen files** next to the work, and `git status`
+shows them as untracked, ready for the first `git add` of the day. It was noticed here by chance,
+while looking at something else.
+
+Decide it explicitly, and write the consequence down rather than the choice alone:
+
+| Option | Consequence |
+|---|---|
+| Version `.claude/skills/` | It travels with the repository, which is the point of a project-scope install |
+| Ignore it | It is installed and not versioned. **It does not survive a fresh clone**, and the only thing that makes its absence visible is the installation table in the configuration |
+
+The two settings files are not the same object either, and one line saves an argument later:
+
+- **`.claude/settings.json` is versioned.** It is the project's floor and its hook registrations,
+  and both belong to everyone who has the repository.
+- **`.claude/settings.local.json` is not.** It carries one machine's absolute paths and one
+  person's accumulated approvals, and neither travels.
+
 ## Reviewing agent permissions
 
 Tool permission files accumulate standing approvals, and they accumulate in the direction of

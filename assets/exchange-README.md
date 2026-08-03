@@ -24,7 +24,7 @@ the timestamp and `head:` are read, never typed.
 
 ## Five things to know before writing
 
-**Read before you write.** `ls -1 | tail -20`. Your question may already be answered.
+**Read before you write.** `ls -1 2*.md | tail -20`. Your question may already be answered.
 
 **The timestamp comes from the clock and `head:` from the project — never from memory.** A message
 stamped ahead of the real time sorts in front of the answer that replies to it, and then the
@@ -71,34 +71,34 @@ asked*.
 wrong directory looks exactly like a healthy channel, and that is not an approval:
 
 ```sh
-n=$(ls -1 *.md 2>/dev/null | wc -l)
+n=$(ls -1 2*.md 2>/dev/null | wc -l)
 [ "$n" -eq 0 ] && { echo "BLIND: no messages here. Wrong directory, or no channel yet." >&2; exit 2; }
 echo "EXAMINED: $n messages"
 ```
 
 ```sh
 # Open questions: state: open, minus anything a later message answers.
-answered=$(grep -hE '^re: +' *.md | awk '{print $2}' | grep -v '^-$' | sort -u)
-for f in $(grep -lE '^state: +open$' *.md); do
+answered=$(grep -hE '^re: +' 2*.md | awk '{print $2}' | grep -v '^-$' | sort -u)
+for f in $(grep -lE '^state: +open$' 2*.md); do
   echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
 done
 ```
 
 ```sh
 # What waits on the person: anything addressed to them that nothing has answered.
-answered=$(grep -hE '^re: +' *.md | awk '{print $2}' | grep -v '^-$' | sort -u)
-for f in $(grep -lE '^to: +(owner|both)$' *.md); do
+answered=$(grep -hE '^re: +' 2*.md | awk '{print $2}' | grep -v '^-$' | sort -u)
+for f in $(grep -lE '^to: +(owner|both)$' 2*.md); do
   grep -qE '^state: +(open|escalated)$' "$f" || continue
   echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
 done
 ```
 
 ```sh
-grep -lE '^from: +owner$' *.md     # every decision the person has made
+grep -lE '^from: +owner$' 2*.md     # every decision the person has made
 ```
 
 ```sh
-ls -1 | tail -20                   # the last twenty messages, in order
+ls -1 2*.md | tail -20                   # the last twenty messages, in order
 ```
 
 **Not `escalated` alone.** Two agents that exchange facts instead of escalating produce almost no

@@ -57,22 +57,32 @@ Capture both output streams. Take the return code on the line AFTER the command,
 formatting call containing a substitution -- the substitution runs first and you capture its code
 instead. The header declares what the block ran against. The last line prints the log's own path.
 
-THE CHANNEL. Questions to the reviewing agent go in <channel>/ as one immutable file per message.
-The format is in <channel>/README.md and THE COMMAND THAT CREATES A MESSAGE IS IN
-<channel>/message-template.md, next to it. USE IT: the timestamp and head: are read, never typed.
-A message stamped ahead of the real time sorts in front of the answer that replies to it, and
-then the directory is no longer ordered, which is the only property the design leans on. UTC.
+THE CHANNEL. Questions to the reviewing agent go in <channel>/ as one immutable file per message,
+and THE WRITER IS A SCRIPT. Call it, do not retype what it does:
 
-Append the body with >>. Do not rewrite the file: that would replace the header you just
-generated with values you remembered, which is the defect the command exists to prevent.
+    <path>/gtd-msg.sh --author code --from code --to cowork --state open \
+                      --slug short-hyphenated  <<'EOF'
+    ## body in markdown
+    EOF
 
-Before writing, read what is there:  ls -1 <channel> | tail -20
+It reads the clock and the commit itself, refuses a bad vocabulary, refuses state: consensus
+without --re, and guards against two messages landing in the same second. A message stamped ahead
+of the real time sorts in front of the answer that replies to it, and then the directory is no
+longer ordered, which is the only property the design leans on. UTC.
+
+<channel>/message-template.md, next to the channel, says how to call it and what it enforces.
+
+NOTHING HERE IS EVER REOPENED. A correction is a NEW message answering the old one, never an edit.
+There is a deny rule behind that now, so an attempt to edit one refuses rather than succeeds
+quietly.
+
+Before writing, read what is there:  ls -1 2*.md | tail -20
 
 READ WHAT THE PERSON HAS ALREADY DECIDED before proposing anything, including what they decided
 in the OTHER session. Both agents record their exchanges with the person, so a choice made in a
 Cowork conversation is not invisible to you:
 
-    grep -lE '^from: +owner$' <channel>/*.md
+    grep -lE '^from: +owner$' <channel>/2*.md
 
 Those are decisions, not opinions. If one rules out what you were about to do, it is settled --
 and if you think it rested on a wrong premise, that is a message with the fact, not a redo.
@@ -85,10 +95,19 @@ reason. Then the block's own first lines prove that message exists:
     test "$(wc -l < "$PROP")" -ge 8 || { echo "FAILED: $PROP has no body to review"; exit 1; }
     echo "proposed in $PROP"
 
-A question has a rule here and a modal has a rule here. The block is the only one of the three
-that ACTS ON THE WORLD, and it was the one with none. On day one an agent cited a message it had
-never written, for a block containing rm inside the version-control directory, and it ran. Saying
-it is written up is not evidence that it is.
+On day one an agent cited a message it had never written, for a block containing rm inside the
+version-control directory, and it ran. Saying it is written up is not evidence that it is.
+
+AND ANY QUESTION WITH DRAFTED OPTIONS GOES TO THE CHANNEL FIRST TOO, not just blocks. A block
+executes; a set of options you wrote is nothing but interpretation, and the one they pick becomes
+a decision both agents treat as not reopenable. On day one five options were put to the person and
+all five rested on a premise the reviewing agent could have falsified in one message. It never saw
+the question.
+
+NEVER HAND THE PERSON A MESSAGE TO RELAY, in either direction. What reaches the other agent is a
+channel message, complete. What the person types carries no content. The tell is that your summary
+looks useful -- shorter, shaped to what they want -- which is exactly what makes it a second lossy
+copy of something that already exists, with them carrying it.
 
 AND YOU READ THE LOG YOURSELF. Never ask the person to paste output back. They run the block and
 say so in three words; you open the file whose path the block printed. Asking for a paste makes
