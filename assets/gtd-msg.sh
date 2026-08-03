@@ -264,7 +264,55 @@ EOF
     printf '  FAIL  %s\n' "$LABEL"; fails=$((fails + 1))
   fi
 
+  # --- Nothing reaches disk until the body is in hand ----------------------
+  # The incident: a 198-byte `settled` with a valid `closes:` and an empty body, which
+  # closed a thread and cannot be corrected because the channel is append-only.
+  LABEL="refuses an empty body, and writes nothing"; SAYING="body is empty"
+  refuses --author cowork --from cowork --to code --slug empty
+
+  LABEL="an interrupted write leaves no file at all"
+  checks=$((checks + 1))
+  kdir="$probe/killdir"; mkdir -p "$kdir"
+  ( bash "$0" --channel "$kdir" --author cowork --from cowork --to code --slug k \
+      < <(sleep 5) >/dev/null 2>&1 ) &
+  kpid=$!
+  sleep 1; kill -TERM $kpid 2>/dev/null || true; wait $kpid 2>/dev/null || true
+  if [ "$(ls -1 "$kdir" 2>/dev/null | wc -l | tr -d ' ')" -eq 0 ]; then
+    printf '  ok    %s\n' "$LABEL"
+  else
+    printf '  FAIL  %s\n' "$LABEL"
+    printf '        fix: report this -- a header was written before the body arrived\n'
+    fails=$((fails + 1))
+  fi
+  rm -rf "$kdir"
+
+  # An stdin that never ends wrote 686 MB into a channel before a timeout killed it,
+  # found while probing the case above rather than by reading the code.
+  # The cap is lowered for the assertion rather than 260 KB being generated to meet it.
+  # The first version of this fed 20,000 lines of `filler` -- 140,000 bytes, comfortably
+  # UNDER the cap -- so it failed, and the failure was in the fixture, not the guard. A
+  # test that has to guess a magic size will keep guessing it wrong; this one sets it.
+  LABEL="refuses a body over the cap"; SAYING="cap"
+  bigdir="$probe/big"; mkdir -p "$bigdir"
+  checks=$((checks + 1))
+  if yes "filler" | head -2000 | GTD_MAX_BODY=1000 bash "$0" --channel "$bigdir" --author cowork \
+       --from cowork --to code --slug big >/dev/null 2>&1; then
+    printf '  FAIL  %s\n' "$LABEL"; fails=$((fails + 1))
+  elif [ "$(ls -1 "$bigdir" 2>/dev/null | wc -l | tr -d ' ')" -eq 0 ]; then
+    printf '  ok    %s\n' "$LABEL"
+  else
+    printf '  FAIL  %s\n' "$LABEL"; fails=$((fails + 1))
+  fi
+  rm -rf "$bigdir"
+
   printf 'EXAMINED: %d checks, exercising the shipped writer against %s\n' "$checks" "$probe"
+  # Said rather than implied. The tty guard is real and one line long, and the obvious
+  # way to assert it -- run the writer under `script` with a fake terminal -- hangs the
+  # whole suite against any build that still waits on stdin, which is exactly the build
+  # you would be testing. `script`'s flags differ between macOS and Linux on top of that.
+  # An assertion that can hang is worse than one nobody wrote, so this one is declared
+  # missing instead of being written badly.
+  printf 'NOT EXAMINED: the terminal guard. Try it by hand: run the writer with no heredoc.\n'
   if [ "$fails" -gt 0 ]; then
     printf 'NOT USABLE HERE: %d of %d checks failed.\n' "$fails" "$checks"
     exit 1
@@ -343,6 +391,47 @@ if [ "$STATE" = "consensus" ] && [ -z "$LANDS_IN" ]; then
   exit 2
 fi
 
+# ---------------------------------------------------------------------------
+# The body is read in full BEFORE anything is created on disk.
+#
+# It used to stream: `{ echo header...; cat; } > "$MSG"` opened the file and wrote the
+# front matter, then waited on stdin. Anything that went wrong from there left a file
+# that is a complete, well-formed, permanently empty message -- and the channel is
+# append-only, so it cannot be fixed, only answered.
+#
+# Measured on a real channel: a 198-byte `state: settled` with a valid `closes:` and a
+# body of zero bytes. It closed a thread. Every guard this writer has passed cleanly,
+# because all seven of them check the envelope and none checks the contents.
+#
+# Two routes produce it and both were reproduced: an empty stdin, and an interruption
+# between the header and the end of `cat`. A third appeared while probing -- an stdin
+# that never ends wrote 686 MB into the channel before the timeout -- so the read is
+# capped as well. Holding the body in memory first turns all three into a refusal.
+# ---------------------------------------------------------------------------
+if [ -t 0 ]; then
+  echo "gtd-msg: stdin is a terminal. The body is read from stdin:" >&2
+  echo "    gtd-msg.sh ... --slug x <<'EOF'" >&2
+  echo "    ## heading" >&2
+  echo "    EOF" >&2
+  exit 2
+fi
+
+BODY=$(head -c "${GTD_MAX_BODY:-262144}")
+if [ "$(printf '%s' "$BODY" | wc -c)" -ge "${GTD_MAX_BODY:-262144}" ]; then
+  echo "gtd-msg: body reached the ${GTD_MAX_BODY:-262144}-byte cap and was not written." >&2
+  echo "  A message is a message, not a log. Put the output in a run log and cite its path." >&2
+  exit 2
+fi
+
+# The minimum member of the family of guards that check CONTENT rather than envelope.
+# A settled that closes a thread with nothing in it is the incident this exists for.
+if [ -z "$(printf '%s' "$BODY" | tr -d '[:space:]')" ]; then
+  echo "gtd-msg: the body is empty. Nothing was written." >&2
+  echo "  A message with a correct envelope and no contents passes every other guard here" >&2
+  echo "  and cannot be corrected afterwards, because the channel is append-only." >&2
+  exit 2
+fi
+
 mkdir -p "$CHANNEL"
 
 # A-09 at level 1: the query runs here, not in a paragraph somebody has to recall.
@@ -388,7 +477,7 @@ MSG="$CHANNEL/$TS-$AUTHOR-$SLUG.md"
   echo "head: $HEAD"
   echo "---"
   echo
-  cat
+  printf '%s\n' "$BODY"
 } > "$MSG"
 
 echo "$MSG"

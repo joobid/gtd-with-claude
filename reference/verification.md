@@ -395,6 +395,37 @@ Four rules about the content:
    it**: a commit body pasted between sessions can lose the blank line between subject and body,
    with neither end able to tell.
 
+   **And the damage is not always that mild.** In one commit body, four lines arrive cut
+   mid-word at exactly 66 characters, each losing the end of a sentence — and the sentences that
+   went missing are the ones stating what the privacy control **does not** cover. The commit still
+   reads as prose, so nothing looks wrong: it says less than it was written to say, confidently.
+
+   **The mechanism is not established, and saying so is the point.** The obvious explanation, a
+   fixed-width transport, does not survive its own evidence: **nine lines longer than 66 survived
+   intact, up to 76 characters**, and a 66-column limit would have cut every one of them. Four
+   mid-word cuts landing on the same column is not chance either. So: *measured in four lines,
+   cause unknown.* Naming a cause here would be the fourth time in this project that a plausible
+   mechanism got written down as a finding.
+
+   **What follows does not depend on knowing the cause.** Text that must land byte-exact should
+   not travel inside a block a person copies, because there is a form that costs nothing and
+   removes the whole class:
+
+   ```sh
+   git commit -F <file>
+   gh pr create --body-file <file>
+   ```
+
+   **The file has to be written by the agent's own file tools, outside the block.** Building it
+   with a heredoc *inside* the pasted block puts the same text back through the same path and
+   buys nothing — the fix would be a placebo. Where an agent has no way to write a file directly,
+   this rule does not apply and the honest thing is to say so rather than perform it.
+
+   This one is prose, not a mechanism, and it is worth naming why: the act leaves **no artefact
+   to check**. Nothing on disk distinguishes a body that went through a clipboard from one that
+   did not. It is accepted anyway, because the measured alternative is continuing to lose bytes
+   out of the sentences that say what a control misses.
+
    **It runs both ways**, and only one direction was written down. A summary handed to the person
    to carry **forward** is the one an agent produces while being helpful: measured, a reviewing
    agent handed over a block summarising a message already sitting complete in the channel. **Never
