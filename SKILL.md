@@ -2,7 +2,7 @@
 name: gtd-with-agents
 description: Set up and run the three-party working method for a project driven by Claude Code and Claude Cowork together — a file-based channel the two agents use to talk to each other, an explicit delegation contract that records what the person decides and what they hand over, and the verification culture that makes agreement between two agents worth anything. Use this whenever someone is starting a project with both Claude Code and Cowork, asks how the two should coordinate, says they are tired of copying questions from one session and pasting answers into the other, asks "who decides what here", "how do I stay informed without approving everything", "how much can I delegate", or wants to install a working agreement, an exchange channel, or an approval policy between agents. Also use when a session arrives cold at a project that already has this method installed and needs to pick it up.
 metadata:
-  version: 0.2.0
+  version: 0.2.1
 ---
 
 # Get Things Done with Claude
@@ -162,6 +162,30 @@ Without that line the person approves a prompt **on every single message**, beca
 writer used to have — filename by substitution, body by heredoc — is one no permission pattern can
 cover. That was measured, and it is the highest recurring cost the method has.
 
+**Keep the rule narrow, and note what it costs to widen.** A leading wildcard is the only shape
+that reaches inside a compound command, which on a `deny` is conservative — it catches the
+dangerous command wherever it hides. On an `allow` it is the exact opposite: `Bash(*gtd-msg.sh*)`
+would approve, without asking, any command that merely *mentions* the file. Same wildcard,
+opposite consequence, because the two lists answer opposite questions.
+
+### Step 4a · Check that the writer writes, not that it is there
+
+```sh
+<path>/gtd-msg.sh --selftest
+```
+
+Six checks against a scratch directory, exercising the shipped writer rather than a copy of its
+logic, and it prints what it examined before its verdict. **Run it on the machine that will use
+it.** The useful question is never which systems the method supports — that is a list written from
+whatever was in front of whoever wrote it — but whether it works here, and only running it answers
+that.
+
+If it reports `the script is executable` as failed, the file is present and will not run: the
+documented invocation is `./gtd-msg.sh`, and a permission rule naming that path matches that text
+and no other. `chmod +x` fixes it where the filesystem carries an exec bit at all. Where it does
+not — an NTFS mount seen from WSL, some sync clients — `chmod` reports success and changes
+nothing, and the project has to move onto a native filesystem.
+
 ### Step 4b · The per-turn channel notice, which is two pieces
 
 **`assets/channel-status.sh` plus the registration that makes the tool run it.** Install both or
@@ -243,9 +267,15 @@ in the plugin cache, under a temporary path that gets regenerated, so the path h
 rather than remembered:
 
 ```sh
-SRC=$(find /var/folders -type d -name gtd-with-agents 2>/dev/null | head -1)
+SRC=$(find "${TMPDIR:-/tmp}" /var/folders -type d -name gtd-with-agents 2>/dev/null | head -1)
+test -n "$SRC" || { echo "FAILED: no skill directory found under TMPDIR or /var/folders"; exit 1; }
 mkdir -p .claude/skills && cp -R "$SRC" .claude/skills/
 ```
+
+The cache lives under the system temporary directory, which is `/var/folders` on macOS and
+`$TMPDIR` elsewhere, so both get searched. **The guard is the point**: with no match, `SRC` is
+empty and `cp -R "" .claude/skills/` copies nothing while reporting an error about an argument
+rather than about the skill. Naming the failure costs one line.
 
 Where a release bundle *is* available, unzip works instead. **Give them one of these, not several.**
 

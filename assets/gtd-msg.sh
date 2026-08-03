@@ -20,10 +20,14 @@
 #
 # --channel defaults to .runs/exchange under the current directory, or $GTD_CHANNEL if set.
 # A project without a repository will point it somewhere else; nothing here assumes git.
+#
+# --selftest runs the writer against a scratch directory and reports what it examined. It is
+# an install step, not a developer convenience: the question is never "which systems does this
+# support" but "does it work on this machine", and only running it answers that.
 
 set -euo pipefail
 
-AUTHOR=""; FROM=""; TO=""; RE="-"; STATE="open"; SLUG=""
+AUTHOR=""; FROM=""; TO=""; RE="-"; STATE="open"; SLUG=""; SELFTEST=""
 CHANNEL="${GTD_CHANNEL:-.runs/exchange}"
 
 while [ $# -gt 0 ]; do
@@ -35,10 +39,105 @@ while [ $# -gt 0 ]; do
     --state)   STATE="$2";   shift 2 ;;
     --slug)    SLUG="$2";    shift 2 ;;
     --channel) CHANNEL="$2"; shift 2 ;;
-    -h|--help) sed -n '3,22p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --selftest) SELFTEST=1; shift ;;
+    -h|--help) sed -n '3,26p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "gtd-msg: unknown argument: $1" >&2; exit 2 ;;
   esac
 done
+
+# ---------------------------------------------------------------------------
+# --selftest
+#
+# Six checks, each naming its own fix. Together they cover everything a list of
+# supported operating systems would try to predict, plus the cases a list cannot
+# see -- an exec bit dropped by a filesystem that does not carry one, a bash old
+# enough to miss a construct, a `date` that rejects the format string.
+#
+# It exercises the real writer rather than a copy of its logic. A self-test that
+# reimplements what it checks passes while the shipped thing is broken.
+# ---------------------------------------------------------------------------
+if [ -n "$SELFTEST" ]; then
+  fails=0
+  checks=0
+  report() {
+    checks=$((checks + 1))
+    if [ "$1" = ok ]; then
+      printf '  ok    %s\n' "$2"
+    else
+      printf '  FAIL  %s\n' "$2"
+      printf '        fix: %s\n' "$3"
+      fails=$((fails + 1))
+    fi
+  }
+
+  printf 'gtd-msg --selftest on %s, bash %s\n' "$(uname -s)" "${BASH_VERSINFO[0]}.${BASH_VERSINFO[1]}"
+
+  if [ "${BASH_VERSINFO[0]}" -ge 3 ]; then
+    report ok "bash is 3.2 or newer"
+  else
+    report fail "bash is 3.2 or newer" "install a current bash and put it ahead on PATH"
+  fi
+
+  # Not cosmetic. The documented invocation is ./gtd-msg.sh, and a permission rule
+  # naming that path matches that text and no other. A filesystem that does not carry
+  # an exec bit -- an NTFS mount seen from WSL, some sync clients -- leaves the file
+  # present, looking installed, and refusing to run.
+  if [ -x "$0" ]; then
+    report ok "the script is executable"
+  else
+    report fail "the script is executable" \
+      "chmod +x '$0' -- and if chmod does not stick, the filesystem carries no exec bit: move the project onto a native one"
+  fi
+
+  if date -u +%Y%m%d-%H%M%S >/dev/null 2>&1; then
+    report ok "date -u accepts the timestamp format"
+  else
+    report fail "date -u accepts the timestamp format" "install coreutils, or put a POSIX date ahead on PATH"
+  fi
+
+  probe="${TMPDIR:-/tmp}/gtd-msg-selftest-$$"
+  mkdir -p "$probe"
+  trap 'rm -rf "$probe"' EXIT
+
+  if out=$(bash "$0" --channel "$probe" --author code --from code --to cowork \
+                     --state open --slug selftest <<'EOF' 2>&1
+## selftest
+EOF
+  ) && [ -f "$out" ]; then
+    report ok "writes a message and prints its path"
+    missing=""
+    for k in from to re state head; do
+      grep -qE "^$k: " "$out" || missing="$missing $k"
+    done
+    if [ -z "$missing" ]; then
+      report ok "the message carries all five front-matter keys"
+    else
+      report fail "the message carries all five front-matter keys" "report this: keys missing:$missing"
+    fi
+  else
+    report fail "writes a message and prints its path" "report this verbatim: $out"
+    report fail "the message carries all five front-matter keys" "blocked by the previous failure"
+  fi
+
+  before=$(ls -1 "$probe" | wc -l)
+  if bash "$0" --channel "$probe" --author code --from code --to cowork \
+               --state consensus --slug bad </dev/null >/dev/null 2>&1; then
+    report fail "refuses state consensus without --re" "report this: a malformed call was accepted"
+  elif [ "$(ls -1 "$probe" | wc -l)" -eq "$before" ]; then
+    report ok "refuses state consensus without --re, and writes nothing"
+  else
+    report fail "refuses state consensus without --re, and writes nothing" \
+      "report this: the call was refused but a file appeared anyway"
+  fi
+
+  printf 'EXAMINED: %d checks, exercising the shipped writer against %s\n' "$checks" "$probe"
+  if [ "$fails" -gt 0 ]; then
+    printf 'NOT USABLE HERE: %d of %d checks failed.\n' "$fails" "$checks"
+    exit 1
+  fi
+  printf 'USABLE HERE.\n'
+  exit 0
+fi
 
 for v in AUTHOR FROM TO SLUG; do
   if [ -z "${!v}" ]; then
