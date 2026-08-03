@@ -182,11 +182,19 @@ def build_fixture(ch: Path, tmp: Path) -> dict[str, set[str]]:
     # bootstrap prompts prescribe. A day of real use produced three of these and zero
     # escalations, and the documented person-facing query looked only at escalations.
     w1 = write("code", "code", "owner", "-", "open", "block-awaiting-you")
+    # Agreed with the person and not carried out. Without this message the fixture cannot
+    # tell the old person-facing derivation from the new one -- both filtered on
+    # `open|escalated`, both returned {e1, w1}, and a checker that returns the same answer
+    # for a correct and an incorrect query is not checking that query at all. It shipped
+    # blind through the round that fixed exactly this defect elsewhere.
+    w2 = write("cowork", "cowork", "owner", w1, "consensus", "agreed-with-you-not-done")
 
     return {
-        "open": {q1, q2, w1},                       # q3 and q4 are answered by later re:
+        "open": {q1, q2},                           # q3, q4 and now w1 are answered by a later re:
         "escalated": {e1},                          # e2 is closed by an owner decision
-        "waiting": {e1, w1},                        # addressed to the person, unanswered
+        # Addressed to the person and not closed. w1 is answered but NOT settled, and being
+        # answered is not being done -- that distinction is the whole point of this row.
+        "waiting": {e1, w1, w2},
         "owner": {d1, d2},
         "consensus": {c1, c2},
         # Messages only. The queries use `2*.md` and not `*.md`, because the channel

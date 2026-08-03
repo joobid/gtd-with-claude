@@ -48,43 +48,67 @@ cannot reach.
 That row is a SELF-REPORT with a date, like a clock: head. You cannot verify it from here and you
 do not try: it says what somebody reported, and only the session on that side can refresh it.
 
-FIRST ACTION: measure the state and present it before proposing anything. What is unsaved, what
-the checks return, what the last messages in the channel say, and which of them are still open:
+FIRST ACTION: derive what is outstanding. DO NOT READ THE CHANNEL FROM OLDEST TO NEWEST -- that
+was the old instruction here and it does not survive a real channel. One working day of two-agent
+use produced 66 messages and 27,919 words, of which 5 were outstanding for this side. Reading it
+all spends the context you needed for the work.
 
-  ls -1 <channel> | tail -20
-  grep -lE '^from: +owner$' <channel>/*.md
+  <path>/channel-status.sh --channel <channel> --me cowork
 
-AND THIS ONE, WHICH IS THE OBJECTIVE THE METHOD PROMISES: what is escalated and still waiting on
-the person. Nothing else in this prompt surfaces it, and an escalation nobody looks at is the one
-failure this whole method exists to prevent.
+INVOKE IT BY HAND. The per-turn hook typically covers one side only, and it is usually not this
+one, so a resume path that assumes it does nothing at all here and says nothing while doing it.
 
-  cd <channel> || exit 1
-  n=$(ls -1 2*.md 2>/dev/null | wc -l)
-  [ "$n" -eq 0 ] && { echo "BLIND: no messages here. Wrong directory, or no channel yet."; exit 2; }
-  echo "EXAMINED: $n messages"
-  answered=$(grep -hE '^re: +' 2*.md | awk '{print $2}' | grep -v '^-$' | sort -u)
-  for f in $(grep -lE '^to: +(owner|both)$' 2*.md); do
-    grep -qE '^state: +(open|escalated)$' "$f" || continue
-    echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
-  done
+Empty output means nothing is outstanding. That is an answer.
+
+THEN READ EXACTLY: every message it named, plus the direct parent of each where it has one. ONE
+HOP, NOT THE CHAIN. If a message plus its parent still does not tell you what is being asked, that
+is a finding to declare, not a reason to keep walking backwards.
+
+DO NOT READ ALL THE DECISIONS AT STARTUP. "Read what the person has already decided" sounds
+prudent and is a read-everything instruction in disguise: on that same channel it is 22 messages
+and more than half the corpus, three times the outstanding set. You query them WHEN YOU ARE ABOUT
+TO PROPOSE SOMETHING, which is a targeted read because you know what you are looking for:
+
+  grep -lE '^from: +owner$' <channel>/2*.md
+
+WHAT IS WAITING ON THE PERSON is a different question and it needs its own derivation. Nothing
+else here surfaces it, and something addressed to them that nobody looks at is the one failure
+this method exists to prevent:
+
+  <path>/channel-status.sh --channel <channel> --me owner
 
 NOT state: escalated ALONE. Two agents that exchange facts instead of escalating produce almost
 none: a full day of real use produced ZERO escalations and three unanswered messages addressed to
 the person, one of them a red command block. A query on escalations returns nothing all day, and
 nothing reads as "nothing needs you".
 
+AND NOT state: open ALONE EITHER, which is the sharper version of the same error. `consensus`
+means the two agents agreed; it says nothing about the work having been done. Deriving on `open`
+hides everything that was agreed and never carried out -- on that channel, three unimplemented
+requirements of a privacy guard. Only a `settled` further down a message's own reply chain closes
+anything.
+
 A BARE grep FOR ANY STATE IS WRONG, and that is why these derive: files are immutable, so an
 answered message keeps its state for ever and the bare form returns every one ever raised. And
 they declare what they examined, because zero from the wrong directory looks like a quiet channel.
+
+PUBLISH YOUR READING BEFORE ACTING ON IT. One message, to: owner, state: open: what the
+derivation named, what you take the outstanding work to be, WHAT YOU DID NOT READ AND COULD NOT
+RECONSTRUCT, and what you intend to do next. A gap announces itself; a confident wrong
+reconstruction does not, and by the time it surfaces it has become work.
+
+If /gtd-with-agents is available here, reference/resuming.md is this procedure in full, with the
+measurements behind each number and the criterion for when you are up to date.
 
 IF YOU STOP, SAY WHAT WOULD UNBLOCK YOU, as something the others can check without asking you --
 the log that has not appeared, the message nobody answered. "Waiting" is not a state anyone else
 can see, and an agent blocked for a reason living only in its own session is invisible: it cost
 two hours the first day this method ran.
 
-READ WHAT THE PERSON HAS ALREADY DECIDED before proposing anything -- including what they
+CHECK WHAT THE PERSON HAS ALREADY DECIDED before proposing anything -- including what they
 decided in the OTHER session. Both agents record their exchanges with the person, so a choice
-made inside a Claude Code prompt is not invisible to you.
+made inside a Claude Code prompt is not invisible to you. Use the grep above, at the moment you
+have a proposal to check, and read only the ones whose slugs touch it.
 
 Those are decisions, not opinions. If one of them rules out what you were about to propose,
 it is settled and you do not reopen it -- and if you think it was decided on a wrong premise,

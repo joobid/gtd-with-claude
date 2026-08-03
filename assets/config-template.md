@@ -191,11 +191,24 @@ cd <channel> || exit 1
 n=$(ls -1 2*.md 2>/dev/null | wc -l)
 [ "$n" -eq 0 ] && { echo "BLIND: no messages here. Wrong directory, or no channel yet." >&2; exit 2; }
 echo "EXAMINED: $n messages"
-# What waits on the person: anything addressed to them that nothing has answered.
-answered=$(grep -hE '^re: +' 2*.md | awk '{print $2}' | grep -v '^-$' | sort -u)
+# What waits on the person: addressed to them, with no `settled` down its own reply chain.
+# NOT `open|escalated`: `consensus` is agreed, not done, and filtering it out is how work
+# both parties signed off on stops being visible to anyone.
+closed=""
+for s in $(grep -lE '^state: +settled$' 2*.md); do
+  cur="$s"
+  while :; do
+    p=$(sed -n 's/^re: *//p' "$cur" | head -1)
+    if [ -z "$p" ] || [ "$p" = "-" ] || [ ! -f "$p" ]; then break; fi
+    case " $closed " in *" $p "*) break ;; esac
+    closed="$closed $p"
+    cur="$p"
+  done
+done
 for f in $(grep -lE '^to: +(owner|both)$' 2*.md); do
-  grep -qE '^state: +(open|escalated)$' "$f" || continue
-  echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
+  if grep -qE '^state: +settled$' "$f"; then continue; fi
+  case " $closed " in *" $f "*) continue ;; esac
+  echo "$f"
 done
 ```
 

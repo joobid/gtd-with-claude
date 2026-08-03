@@ -24,6 +24,28 @@ Everything else is the body: prose, commands, output, whatever the message needs
 differ from `from:`, which is the person for a recorded decision. That way `ls -1` stays readable
 by session while `grep -E '^from: +owner$'` stays readable by decision.
 
+### `from:` is a closed list of three roles, and nobody else writes here
+
+**`code`, `cowork`, `owner`. There is no fourth value and none is being added.** A session that is
+not one of the project's two agents, and is not the person, **does not write to this channel** —
+however good its reason. What it has to say goes to the person, in conversation, and they decide
+whether it becomes a message. If it does, they are the sender, because the decision to say it was
+theirs.
+
+This is written down because the silence was resolved the wrong way. A session working on a
+different repository had a finding for one of the agents here, found no value that described it,
+and **wrote as `cowork`** — borrowing the identity of a party it was not. Nothing refused it: the
+writer enforces the enum, and `cowork` is in the enum.
+
+The cost is not etiquette. Every query in this method derives on `from:` and `to:`, so a borrowed
+sender is a message the derivations attribute to an agent that never said it — and the two
+sessions reading that channel now hold a fact from a party neither can question, wearing the name
+of one they can. `grep -lE '^from: +cowork$'` cannot tell the difference, and neither can the
+agent whose name was used.
+
+**The rule that follows, and it is one line:** if you cannot honestly write one of the three
+values, you are not a participant in this channel. Say it to the person instead.
+
 ---
 
 ## Why each choice, because none of them is arbitrary
@@ -509,12 +531,24 @@ done
 ```
 
 ```sh
-# What waits on the person: anything addressed to them that nothing has answered.
-# Both kinds, because they arrive at very different rates.
-answered=$(grep -hE '^re: +' 2*.md | awk '{print $2}' | grep -v '^-$' | sort -u)
+# What waits on the person: addressed to them, with no `settled` down its own reply chain.
+# NOT `open|escalated`: `consensus` is agreed, not done, and filtering it out is how work
+# both parties signed off on stops being visible to anyone.
+closed=""
+for s in $(grep -lE '^state: +settled$' 2*.md); do
+  cur="$s"
+  while :; do
+    p=$(sed -n 's/^re: *//p' "$cur" | head -1)
+    if [ -z "$p" ] || [ "$p" = "-" ] || [ ! -f "$p" ]; then break; fi
+    case " $closed " in *" $p "*) break ;; esac
+    closed="$closed $p"
+    cur="$p"
+  done
+done
 for f in $(grep -lE '^to: +(owner|both)$' 2*.md); do
-  grep -qE '^state: +(open|escalated)$' "$f" || continue
-  echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
+  if grep -qE '^state: +settled$' "$f"; then continue; fi
+  case " $closed " in *" $f "*) continue ;; esac
+  echo "$f"
 done
 ```
 

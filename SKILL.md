@@ -2,7 +2,7 @@
 name: gtd-with-agents
 description: Set up and run the three-party working method for a project driven by Claude Code and Claude Cowork together — a file-based channel the two agents use to talk to each other, an explicit delegation contract that records what the person decides and what they hand over, and the verification culture that makes agreement between two agents worth anything. Use this whenever someone is starting a project with both Claude Code and Cowork, asks how the two should coordinate, says they are tired of copying questions from one session and pasting answers into the other, asks "who decides what here", "how do I stay informed without approving everything", "how much can I delegate", or wants to install a working agreement, an exchange channel, or an approval policy between agents. Also use when a session arrives cold at a project that already has this method installed and needs to pick it up.
 metadata:
-  version: 0.2.2
+  version: 0.3.0
 ---
 
 # Get Things Done with Claude
@@ -33,11 +33,20 @@ Two situations. Read which one you are in before doing anything.
 delegation questionnaire, create the channel, write the configuration, hand over the two
 bootstrap prompts.
 
-**B · The configuration already exists.** Do not run the questionnaire again. Read the
-configuration file, read the channel from oldest to newest, and report where things stand.
-`assets/bootstrap-cowork.md` is written for exactly this case.
+**B · The configuration already exists, and you are arriving cold.** Do not run the questionnaire
+again. **Read `reference/resuming.md` and follow it** — it is a procedure, not advice, and it ends
+with a stated criterion for when you are up to date.
 
-To tell them apart, look for a configuration file — by default `gtd-config.md` at the project
+In one line: read the configuration, ask `channel-status.sh` what is outstanding, read those
+messages and their direct parents, and **publish your reading to the channel before acting on
+it**. Nothing else.
+
+**Do not read the channel from oldest to newest.** That instruction used to live here and it was
+wrong: measured on one working day of two-agent use, the channel held 66 messages and 27,919
+words, of which the outstanding set was 8. Ingesting it spends the context the startup existed to
+protect, on a corpus that is mostly closed.
+
+To tell A from B, look for a configuration file — by default `gtd-config.md` at the project
 root. If you do not find it, ask before assuming: a project may keep it elsewhere.
 
 ---
@@ -383,6 +392,7 @@ rather than all of them.
 
 | | |
 |---|---|
+| `reference/resuming.md` | **Arriving cold at a project that already runs this.** The derivation as front door, what to read, what not to read, and when you are up to date |
 | `reference/roles.md` | The three parts, and the **state/events frontier** that makes review possible |
 | `reference/protocol.md` | The channel: file names, front matter, immutability, and why each choice |
 | `reference/approvals.md` | The questionnaire, the traffic-light triage, the floor |

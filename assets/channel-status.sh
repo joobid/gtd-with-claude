@@ -55,7 +55,10 @@ while [ $# -gt 0 ]; do
     *) echo "channel-status: unknown argument: $1" >&2; exit 2 ;;
   esac
 done
-case "$ME" in code|cowork) ;; *) echo "channel-status: --me must be code or cowork" >&2; exit 2 ;; esac
+# `owner` is here because "what is waiting on the person" is the objective this whole method
+# promises, and it is the same derivation with a different audience. Leaving it out meant the
+# only way to ask it was a hand-written query that nobody kept in step with this one.
+case "$ME" in code|cowork|owner) ;; *) echo "channel-status: --me must be code, cowork or owner" >&2; exit 2 ;; esac
 
 if [ -n "$SELFTEST" ]; then
   # The fixture is the finding. Four threads, each a shape the derivation has to tell
@@ -95,6 +98,17 @@ if [ -n "$SELFTEST" ]; then
   expect miss '000005-code-b-close'   'the settled message itself is not pending'
   expect hit  '000006-cowork-c-ask'   'a settled with re: - closes nothing (accepted noise)'
   expect miss '000008-code-d-ask'     'a message addressed to the other agent is not shown'
+
+  # --me owner is the query the method exists for, so it gets an assertion of its own.
+  # The `to: both` decision reaches the person; nothing addressed to code alone does.
+  own=$(bash "$0" --channel "$probe" --me owner 2>&1) || true
+  checks=$((checks + 1))
+  if printf '%s' "$own" | grep -q '000001-cowork-a-ask'; then
+    printf '  FAIL  --me owner does not pick up messages addressed to the agents\n'
+    fails=$((fails + 1))
+  else
+    printf '  ok    --me owner does not pick up messages addressed to the agents\n'
+  fi
 
   printf 'EXAMINED: %d assertions over %d messages in a synthetic channel at %s\n' \
          "$checks" "$(ls -1 "$probe"/2*.md | wc -l | tr -d ' ')" "$probe"
