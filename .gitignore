@@ -20,3 +20,6 @@ __pycache__/
 # against the files that existed at the time and the next three were called something
 # else. A list written from what is in front of you measures what was in front of you.
 docs-*
+
+article-*.md
+prompt-*.md
