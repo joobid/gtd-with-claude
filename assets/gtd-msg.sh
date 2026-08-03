@@ -245,14 +245,24 @@ EOF
     printf '  FAIL  %s\n' "$LABEL"; fails=$((fails + 1))
   fi
 
+  # Stderr goes to a file and the file gets grepped, rather than a heredoc feeding a
+  # command inside an `if` condition with a pipe. That shape works on bash 5 and fails
+  # on bash 3.2 -- which is what macOS ships, so it failed for the first person to run
+  # it and passed everywhere it was developed. The check was sound and the harness was
+  # not, and the two are indistinguishable from the word FAIL: the feature had to be
+  # probed by hand to tell them apart. Same shape as the awk that aborts under one
+  # implementation and not another, this time inside this file's own self-test.
   LABEL="writing to the person puts those decisions in front first (A-09)"
   checks=$((checks + 1))
-  if bash "$0" --channel "$probe" --author code --from code --to owner --state open \
-             --slug gap <<'EOF' 2>&1 >/dev/null | grep -q 'already decided'
+  bash "$0" --channel "$probe" --author code --from code --to owner --state open \
+            --slug gap >/dev/null 2>"$probe/.a09.err" <<'EOF'
 ## a gap
 EOF
-  then printf '  ok    %s\n' "$LABEL"
-  else printf '  FAIL  %s\n' "$LABEL"; fails=$((fails + 1)); fi
+  if grep -q 'already decided' "$probe/.a09.err" 2>/dev/null; then
+    printf '  ok    %s\n' "$LABEL"
+  else
+    printf '  FAIL  %s\n' "$LABEL"; fails=$((fails + 1))
+  fi
 
   printf 'EXAMINED: %d checks, exercising the shipped writer against %s\n' "$checks" "$probe"
   if [ "$fails" -gt 0 ]; then
