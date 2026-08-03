@@ -78,11 +78,24 @@ quietly.
 
 Before writing, read what is there:  ls -1 2*.md | tail -20
 
-READ WHAT THE PERSON HAS ALREADY DECIDED before proposing anything, including what they decided
+IF YOU ARE ARRIVING COLD AT A CHANNEL THAT ALREADY HAS HISTORY, do not read it from oldest to
+newest. Derive what is outstanding and read only that, plus each one's direct parent:
+
+    <path>/channel-status.sh --channel <channel> --me code
+
+Measured on one working day of two-agent use: 66 messages, 27,919 words, of which 8 were
+outstanding for this side. `reference/resuming.md` is the full procedure and says when you can
+consider yourself up to date.
+
+CHECK WHAT THE PERSON HAS ALREADY DECIDED before proposing anything, including what they decided
 in the OTHER session. Both agents record their exchanges with the person, so a choice made in a
 Cowork conversation is not invisible to you:
 
     grep -lE '^from: +owner$' <channel>/2*.md
+
+Run it WHEN YOU HAVE A PROPOSAL TO CHECK, and read only the ones whose slugs touch it. Reading
+all of them on arrival sounds prudent and is a read-everything instruction in disguise: on that
+channel they are 22 messages, three times the outstanding set.
 
 Those are decisions, not opinions. If one rules out what you were about to do, it is settled --
 and if you think it rested on a wrong premise, that is a message with the fact, not a redo.

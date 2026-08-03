@@ -164,20 +164,29 @@ def claim_core_is_agnostic(docs: list[Path]) -> list[str]:
 
 
 def claim_queries_declare_scope(docs: list[Path]) -> list[str]:
-    """Every document that carries channel queries also carries the scope declaration.
+    """Every shipped executable declares what it examined, and refuses over nothing.
 
-    §1 says a check refuses to approve over an empty input, and `approvals.md` Part 4
-    already demands a probe of the reporting command. The channel queries -- the ones an
-    agent runs first, every session -- were the instrument without it: run from the wrong
-    directory they return zero, which is what a healthy quiet channel returns too.
+    This claim used to scan DOCUMENTS for a hand-written scope guard, because the channel
+    queries lived in prose. They are scripts now, so the claim follows the behaviour: a
+    document cannot fail this any more, and checking documents for it would have gone
+    quietly vacuous -- a claim that cannot fail is the shape this file exists to catch.
+
+    The tree comes from `docs`, never from ROOT. Reading ROOT here made the claim blind to
+    the self-test's mutated copy: it reported on the real repository every time, so the
+    mutation "changed nothing" and the claim proved itself untestable. An instrument
+    pointed at the wrong object, inside the file that checks for exactly that.
     """
+    root = next((d.parent for d in docs if d.name == "SKILL.md"), ROOT)
     bad = []
-    for p in docs:
-        t = p.read_text()
-        if "^state: +open$" not in t:
-            continue
-        if "BLIND: no messages here" not in t:
-            bad.append(f"{p.name} documents channel queries and never declares their scope")
+    shs = sorted((root / "assets").glob("*.sh"))
+    if not shs:
+        return ["no shipped executables found: this claim examined nothing"]
+    for sh in shs:
+        t = sh.read_text()
+        if "EXAMINED" not in t:
+            bad.append(f"{sh.name} never says what it examined")
+        if "BLIND" not in t and "not a pass" not in t:
+            bad.append(f"{sh.name} has no blind state -- nothing to look at reads as nothing to find")
     return bad
 
 
@@ -215,7 +224,8 @@ def self_test() -> int:
          "reference/approvals.md", lambda t: t.replace("## Part 3 · The daily triage",
              "## Part 3 · The daily triage\n\nSaving a commit on a branch is amber.", 1)),
         ("channel queries refuse to answer over nothing",
-         "reference/protocol.md", lambda t: t.replace("BLIND: no messages here", "quiet", 1)),
+         "assets/channel-status.sh", lambda t: t.replace("BLIND", "quiet").replace(
+             "not a pass", "fine")),
     ]
     ok = True
     with tempfile.TemporaryDirectory() as tmp:

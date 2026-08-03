@@ -9,14 +9,21 @@ One **immutable** file per message. Nothing here is ever edited or reopened.
 YYYYMMDD-HHMMSS-<author>-<slug>.md          author: whoever typed it — code | cowork
 ```
 
+Every key below is **indented by two spaces on purpose**, and it is not formatting. Written flush
+left, this file matches `grep '^state: open' *.md` and counts itself as a message — which is
+exactly what happened: 33 where there were 32, three times, in three separate sessions. A document
+that describes a format has to be unable to impersonate it.
+
 ```
----
-from: code | cowork | owner
-to: code | cowork | owner | both
-re: <filename this answers>   (or -)
-state: open | consensus | settled | escalated
-head: sha:<commit>  |  clock:<utc timestamp>
----
+  ---
+  from: code | cowork | owner
+  to: code | cowork | owner | both
+  re: <filename this answers>   (or -)
+  state: open | consensus | settled | escalated
+  closes: <text quoted from what it closes>   (settled only, required)
+  lands-in: <permanent file>                  (consensus only, required)
+  head: sha:<commit>  |  clock:<utc timestamp>
+  ---
 ```
 
 `message-template.md`, next to this file, has the command that creates a message. **Use it** —
@@ -63,39 +70,20 @@ The test for what to record: **would the other agent behave differently if it kn
 
 ## Finding what is live
 
-These are not one-liners, and that is the point: because files are immutable, an answered message
-still says `state: open` for ever. A bare `grep -E '^state: +open$'` returns *every question ever
-asked*.
-
-**They declare what they examined and refuse to answer over nothing** — zero results from the
-wrong directory looks exactly like a healthy channel, and that is not an approval:
+**Ask the script, do not write the query.** Files are immutable, so an answered message says
+`state: open` for ever and a bare grep returns every question ever asked. The derivation lives in
+one place, with a `--selftest` behind it, because four hand-copied versions of it drifted apart
+while every one of them looked right.
 
 ```sh
-n=$(ls -1 2*.md 2>/dev/null | wc -l)
-[ "$n" -eq 0 ] && { echo "BLIND: no messages here. Wrong directory, or no channel yet." >&2; exit 2; }
-echo "EXAMINED: $n messages"
+channel-status.sh --channel . --me code|cowork|owner
+channel-status.sh --channel . --count
+gtd-msg.sh --channel . --decisions
 ```
 
-```sh
-# Open questions: state: open, minus anything a later message answers.
-answered=$(grep -hE '^re: +' 2*.md | awk '{print $2}' | grep -v '^-$' | sort -u)
-for f in $(grep -lE '^state: +open$' 2*.md); do
-  echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
-done
-```
-
-```sh
-# What waits on the person: anything addressed to them that nothing has answered.
-answered=$(grep -hE '^re: +' 2*.md | awk '{print $2}' | grep -v '^-$' | sort -u)
-for f in $(grep -lE '^to: +(owner|both)$' 2*.md); do
-  grep -qE '^state: +(open|escalated)$' "$f" || continue
-  echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
-done
-```
-
-```sh
-grep -lE '^from: +owner$' 2*.md     # every decision the person has made
-```
+**Never count with a glob.** `grep -l '^state: open' *.md` returns one too many: this README
+documents the vocabulary, so it counts itself. That produced three wrong counts in eighteen hours
+across three sessions. `--count` excludes non-messages, and every derivation uses the same helper.
 
 ```sh
 ls -1 2*.md | tail -20                   # the last twenty messages, in order

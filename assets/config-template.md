@@ -37,47 +37,35 @@ both can read it.
 | Implementing (`<tool>`) | `<yes, at ~/.claude/skills / yes, at .claude/skills / no>` | `<date>` |
 | How it got there | `<unzipped from a release / cp -R from the plugin cache / other>` |
 
-**The column is called *self-reported* and not *observed*, and the word is the point.** Each agent
-can observe its own side and nothing else; the other row records what somebody said. A `yes`
-written in January still reads `yes` in March after somebody uninstalled it. It is the same
-distinction `head: clock:` makes against `head: sha:` — a value with a date and no way to check it
-from here.
+**Each side measures itself and publishes the result. Neither fills in the other's row.**
 
-> **Every session compares its own side against its row before doing anything else.** Agreeing
-> costs nothing and produces nothing. **Disagreeing goes in the channel as a message with
-> `state: open` and `to: owner`, and the agent does not edit this file.**
+```sh
+channel-status.sh --whoami
+```
 
-Those two front-matter values are not decoration. Without them the correction is visible only in
-`ls -1 | tail -20` — that is, for the next twenty messages — and then it is invisible to every
-query this method documents. With them it shows up in the open-questions query until somebody
-resolves it, which is the whole point of writing it down.
+That is a level-1 mechanism and it replaces a rule that failed the first time it was tested: asked
+about the *other* side's version, an agent measured **its own store**, reported the number as the
+other's, and had no way to notice — because the measurement succeeded. The command answers only
+about the side it runs on and says so in its first line.
 
-That last clause is deliberate and it was got wrong once. Letting each agent correct its own row
-would give this file **two writers**, which is exactly the shape `protocol.md` rejects for a shared
-status file — *"a one-slot resource with two writers… a collision waiting for a bad moment"*. The
-rows are per-agent, so a collision would be rare rather than impossible, and *rare* is not the
-standard this method holds anything else to.
+The column is *self-reported*, not *observed*: a `yes` written in January still reads `yes` in
+March after somebody uninstalled it. Same distinction as `head: clock:` against `head: sha:`.
 
-So the state is **derived**, like everything else here: this table is what was set up, and a later
-`from: <agent>` message correcting a row is the fresher fact. The person folds it back into this
-file when they next touch it. One writer, no locking, and the same rule that makes `re:` work.
+> **Disagreeing with your own row goes in the channel** — `state: open`, `to: owner` — and the
+> agent does not edit this file. Two agents correcting their own rows would give it two writers,
+> the shape `protocol.md` rejects for a shared status file. The table is what was set up; a later
+> message is the fresher fact.
 
-Where an agent's answer is `no`, it cannot open `reference/protocol.md` and works from the two
-files copied into the channel. That is a supported configuration, not a broken one — but the other
-agent has to know, because it changes what that agent can be asked to consult.
+Where an agent's answer is `no`, it works from the two files copied into the channel. Supported,
+not broken — but the other agent has to know, because it changes what it can be asked to consult.
 
 | | |
 |---|---|
 | Installed, and what came back | `<path to log  /  not attempted>` |
 
-**An install is a verdict handed down from outside the project, and it leaves nothing behind
-unless somebody catches it.** Everything else this method records is an event *inside* the work —
-a command, a check, a decision — and there is a rule for each. An install, an upload, a publish,
-a gate refusing: those happen elsewhere and come back as a yes or a no, and the answer is
-reconstructed from memory a week later if nobody wrote it down.
-
-So the same rule as the floor: **never claim it installs without a path.** Attempt it, paste back
-what the installer said, verbatim, and put the file next to this one.
+**An install is a verdict from outside the project and leaves nothing behind unless somebody
+catches it.** Never claim it installed without a path: attempt it, paste back what the installer
+said verbatim, and put the file next to this one.
 
 ## What the person decides
 
@@ -109,12 +97,22 @@ and the Notes column says which grouped answer they came from.
 Refused regardless of anything above. The reason is written because a limit whose reason is not
 stated gets argued with later.
 
-| Class | Why | Mechanism |
-|---|---|---|
-| Real or personal data, privacy, rewriting history | Reverting does not undo it, and the failure is silent — a barrier that has stopped seeing something reports what a clean barrier reports | `attempted, not verified — <path>` |
-| Destructive actions with no inverse | Delegation assumes a mistake is recoverable. Archive instead of deleting and it leaves this class | `attempted, not verified — <path>` |
-| Spending money | The agents do not hold the mandate. The error leaves an account, not a file | `none — agreement only` |
-| Anything reaching a third party | The person's name is on it, and it cannot be recalled by deciding it was a mistake | `none — agreement only` |
+**Which side each row is enforced on, before the mechanism column.** The permission configuration
+belongs to one tool, so a floor written there covers the agent running in that tool and **nothing
+else**. Measured: 23 `deny` and 27 `ask` rules that the configuration described as *not
+configurable* did not exist for the reviewing agent — proved by running the exact forbidden shape
+from that side, with four rules naming it, and nothing appearing. **And the side without a floor
+is the one that sees the most third-party data, because reviewing means reading.**
+
+This is not fixable, only declarable. `code only` is the honest default for scope, the way
+`attempted, not verified` is for mechanism.
+
+| Class | Enforced on | Why | Mechanism |
+|---|---|---|---|
+| Real or personal data, privacy, rewriting history | `code only` | Reverting does not undo it, and the failure is silent — a barrier that has stopped seeing something reports what a clean barrier reports | `attempted, not verified — <path>` |
+| Destructive actions with no inverse | `code only` | Delegation assumes a mistake is recoverable. Archive instead of deleting and it leaves this class | `attempted, not verified — <path>` |
+| Spending money | `neither` | The agents do not hold the mandate. The error leaves an account, not a file | `none — agreement only` |
+| Anything reaching a third party | `neither` | The person's name is on it, and it cannot be recalled by deciding it was a mistake | `none — agreement only` |
 
 > **The cells above are pre-filled at the honest default, and that is deliberate.** A blank or a
 > `<...>` reads exactly like a row nobody reached, so a floor that was never verified would be
@@ -191,11 +189,24 @@ cd <channel> || exit 1
 n=$(ls -1 2*.md 2>/dev/null | wc -l)
 [ "$n" -eq 0 ] && { echo "BLIND: no messages here. Wrong directory, or no channel yet." >&2; exit 2; }
 echo "EXAMINED: $n messages"
-# What waits on the person: anything addressed to them that nothing has answered.
-answered=$(grep -hE '^re: +' 2*.md | awk '{print $2}' | grep -v '^-$' | sort -u)
+# What waits on the person: addressed to them, with no `settled` down its own reply chain.
+# NOT `open|escalated`: `consensus` is agreed, not done, and filtering it out is how work
+# both parties signed off on stops being visible to anyone.
+closed=""
+for s in $(grep -lE '^state: +settled$' 2*.md); do
+  cur="$s"
+  while :; do
+    p=$(sed -n 's/^re: *//p' "$cur" | head -1)
+    if [ -z "$p" ] || [ "$p" = "-" ] || [ ! -f "$p" ]; then break; fi
+    case " $closed " in *" $p "*) break ;; esac
+    closed="$closed $p"
+    cur="$p"
+  done
+done
 for f in $(grep -lE '^to: +(owner|both)$' 2*.md); do
-  grep -qE '^state: +(open|escalated)$' "$f" || continue
-  echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
+  if grep -qE '^state: +settled$' "$f"; then continue; fi
+  case " $closed " in *" $f "*) continue ;; esac
+  echo "$f"
 done
 ```
 
@@ -228,8 +239,14 @@ did not happen.
 nothing when there is nothing. It is what stops *"no file wakes anyone up"* from meaning *"the
 person has to remember"*.
 
+**It shows `consensus` as well as `open`, and that is the correction of a real defect.** Agreed is
+not done: only a `settled` further down a message's own reply chain closes it. Expect the list to
+include things both agents already signed off on and neither has carried out — that is what it is
+for.
+
 **The probe row is not paperwork.** Over an empty channel the script prints nothing and looks
-correct, so an installation confirmed against an empty channel has confirmed nothing.
+correct, so an installation confirmed against an empty channel has confirmed nothing. `--selftest`
+covers the derivation against a synthetic channel; the probe row covers *this* project's wiring.
 
 ## What this does not do
 

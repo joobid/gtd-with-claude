@@ -270,40 +270,20 @@ you did.
 
 ## 11 · When this check passes, what else would have made it pass?
 
-Section 2 asks whether a verifier has been seen to fail. That is necessary and nowhere near
-sufficient, because **a check can have been seen to fail once and still pass for a dozen reasons
-unrelated to the property it claims to establish.** Failing is not the way checks usually let
-things through. Being satisfiable another way is.
+**Write down the cheapest wrong thing that would also pass**, before trusting the check. For a
+count, that sentence is *"a different set with the same total"* — and writing it is what makes you
+compare sets instead of totals.
 
-So, alongside *break it on purpose*, a second habit that costs one sentence:
+Three of this repository's own instruments failed exactly there. One compared line totals, so four
+queries summing to the right number looked correct. One built its fixture with a hand-rolled writer
+while claiming it used the shipped one, so it agreed with whichever side the author had in mind.
+One printed `ok` whenever the unmutated run had any finding at all, which is independent of whether
+the mutation was noticed.
 
-> **When you write a check, write down the cheapest wrong thing that would also pass it.**
-
-Writing that sentence is what produces the fix, every time:
-
-| The check | The cheapest wrong thing that also passes | So you |
-|---|---|---|
-| A count matches the expected number | A different set with the same total | Compare **sets**, not totals |
-| A certification points at a log file | An empty file | Put the outcomes **in** the log, and check for blanks |
-| A test suite of deny rules refuses twice | A machine where the two spellings you thought of are the two you tested | Test **a spelling you did not write the rule for** |
-| A prompt appears where you expected one | A machine with nothing configured, which prompts anyway | **Plant** the permission first, then confirm the prompt still wins |
-| A self-test reports the mutation was noticed | Anything else failing at the same time | Compare the finding **sets** before and after |
-| A validator declares *N rules over M files* | An `M` dominated by objects nobody validates | Exclude them, or the declaration has stopped meaning what it says |
-| A package contains exactly the right files | **A container nothing can open.** Every check read the payload; none looked at the envelope | Check what the artefact **is**, not only what it holds |
-| The official validator approves it | **A validator that is not the one that admits it.** Rules read from a reference implementation are the rules that implementation has, not the rules the gate enforces | Say *"mirrors the reference validator"*, never *"this will be accepted"* — and when the gate refuses, add its rule here rather than only fixing the instance |
-
-Every row of that table is a real defect from this repository's own history, and they are one
-shape six times: **the passing condition was much weaker than the claim it certified.**
-
-### The stronger version, where a fixture exists
-
-If a check runs against fixture data with a known answer, you can measure distinctiveness instead
-of reasoning about it: **mutate the fixture, not just the checker.** Change one record's state,
-remove a link, add an entry — and require that each mutation changes at least one reported result.
-
-A check that reports the same thing under data that no longer means the same thing is passing for
-a reason unrelated to what it claims. That is measurable rather than merely suspected, and it is
-the difference between a check you trust and a check you hope about.
+**And mutate the fixture, not only the checker.** A checker that survives its own mutation may still
+be reading an object that cannot express the defect: the fixture had no `consensus` addressed to the
+person, so the correct and the incorrect derivation returned the same set and both passed. The
+mutation has to reach the *data*, or you have tested the code around a hole.
 
 ## 12 · A verdict from outside leaves no artefact unless you catch it
 
@@ -409,33 +389,37 @@ Four rules about the content:
 3. **The header declares what it ran against** — the version, the branch, whatever identifies the
    state. A record that does not say what it ran against cannot be judged still valid, and a
    figure measured before the project moved looks exactly like a current one.
-4. **The block ends by printing the path of its own log — and the agent that wrote the block is
-   the one that reads it.** Nobody hands the output to anybody. A person asked to paste output
-   back has been made the transport again, this time for results instead of for questions, and
-   this method opens by naming that as the failure it exists to remove.
+4. **The block prints its own log path, and the agent that wrote the block reads it.** Nobody hands
+   output to anybody. Asking a person to paste results back makes them the transport again, which
+   is the failure this method opens by naming — and **what travels through a chat is altered by
+   it**: a commit body pasted between sessions can lose the blank line between subject and body,
+   with neither end able to tell.
 
-   It is not only friction. **What travels through a chat is altered by it:** a commit body pasted
-   between two sessions can lose the blank line separating its subject from its body, and neither
-   end can tell — it was nearly reported as a defect that did not exist, and in the other direction
-   it would have been approved malformed. The block that runs is the one in the message; the result
-   that gets judged is the one in the log. A chat is a rendering of both.
+   **It runs both ways**, and only one direction was written down. A summary handed to the person
+   to carry **forward** is the one an agent produces while being helpful: measured, a reviewing
+   agent handed over a block summarising a message already sitting complete in the channel. **Never
+   hand the person a message to relay.** The tell is that the summary looks *useful* — shorter,
+   shaped to what they want — which is exactly what makes it a second lossy copy.
 
-   **And it runs both ways, which only one direction said.** *"Do not ask them to paste output
-   back"* covers results travelling **toward** an agent. Nothing covered a summary handed to the
-   person to carry **forward**, and that is the one an agent produces while trying to be helpful.
-   Measured: after an afternoon spent installing the channel, a reviewing agent handed the person a
-   block to paste into the other session, summarising a message already sitting complete in the
-   channel. The person refused it, correctly. **Never hand the person a message to relay** — what
-   reaches the other agent is a channel message, complete and standing alone, and what the person
-   types carries no content. The tell is that the summary looks *useful*: shorter than the message,
-   shaped to what they would want. That is precisely what makes it a second, lossy copy of
-   something that already existed, with the person carrying it.
+   **Two exceptions, both where no log exists to read**: an install verdict and a permission rule's
+   refusal happen outside the project and come back once, in an interface. Those get pasted
+   verbatim onto a line the block left blank — see §12.
 
-   **The two exceptions are the ones where no log exists to read**, and they are exceptions rather
-   than the pattern: an install verdict and a permission rule's refusal both happen outside the
-   project and come back once, in an interface. Those get pasted verbatim onto a line the block
-   left blank — see §12. Everything else, the agent opens itself.
+And one rule about the directory, corrected by measurement after being written the other way round.
+It was *"raw output by design; nothing scans it, and what protects it is that it does not leave."*
+**That is false, and it hid a live exposure.** A third party's name and national ID were removed
+from the tracked tree by a commit that turned the barrier green — and stayed intact in the channel
+message reporting the fix, because the run directory is gitignored and the project's scanner had
+therefore never looked at it. **Outside version control is not outside disk.** Talking about a value
+copies it here; removing it from the tree does not remove it from here.
 
-And one rule about the directory: **it is raw, unsanitised output by design.** It is where a real
-value lands if one is ever printed. It never gets shared, published or committed, and nothing
-scans it — what protects it is that it does not leave.
+```sh
+channel-status.sh --audit <runs dir>
+```
+
+**And it opens a conflict this method has to state rather than inherit.** A channel message is never
+edited — a correction is a new file. The first floor class says the damage is not undone by
+reverting. On this one file the two rules contradict each other, so **class 1 is the single
+exception to immutability**: redact the value in place, leave an immutable mark saying what was
+redacted and why, and never remove the message. Without the exception the protocol requires keeping
+what the floor forbids keeping.

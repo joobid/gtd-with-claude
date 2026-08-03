@@ -127,7 +127,7 @@ WRITER = ROOT / "assets/gtd-msg.sh"
 
 
 def write_message(ch: Path, tmp: Path, author: str, frm: str, to: str,
-                  re_: str, state: str, slug: str) -> str:
+                  re_: str, state: str, slug: str, extra: str = "") -> str:
     """Create one fixture message BY RUNNING THE SHIPPED WRITER.
 
     This used to extract a fenced block out of `message-template.md`, because the writer
@@ -143,7 +143,8 @@ def write_message(ch: Path, tmp: Path, author: str, frm: str, to: str,
         raise SystemExit(f"FATAL: {WRITER.name} is gone. The fixture is built by the "
                          f"shipped writer, so nothing was checked.")
     cmd = (f'"{WRITER}" --channel "{ch}" --author {author} --from {frm} --to {to} '
-           f'--re {re_} --state {state} --slug {slug} <<\'EOF\'\nbody\nEOF\n')
+           f'--re {re_} --state {state} --slug {slug} {extra}<<\'EOF\'\n'
+           f'## body\nbody\nEOF\n')
     rc, out, err = run(cmd, tmp)
     if rc != 0 or not out:
         raise SystemExit(f"FATAL: the shipped writer failed ({rc}): {err or out}")
@@ -159,34 +160,51 @@ def build_fixture(ch: Path, tmp: Path) -> dict[str, set[str]]:
     for a in ("assets/exchange-README.md", "assets/message-template.md"):
         shutil.copy(ROOT / a, ch / ("README.md" if "exchange" in a else "message-template.md"))
 
-    def write(author, frm, to, re_, state, slug) -> str:
-        return write_message(ch, tmp, author, frm, to, re_, state, slug)
+    def write(author, frm, to, re_, state, slug, extra="") -> str:
+        return write_message(ch, tmp, author, frm, to, re_, state, slug, extra)
 
     q1 = write("cowork", "cowork", "code", "-", "open", "q-one")
     q2 = write("cowork", "cowork", "code", "-", "open", "q-two")
     q3 = write("code", "code", "cowork", "-", "open", "q-three")
     q4 = write("code", "code", "cowork", "-", "open", "q-four-answered")
-    c1 = write("cowork", "cowork", "code", q4, "consensus", "answer-to-q-four")
+    c1 = write("cowork", "cowork", "code", q4, "consensus", "answer-to-q-four",
+               '--lands-in MANIFEST ')
     # Escalations are addressed to the person: that is what escalating means here.
     e1 = write("code", "code", "owner", "-", "escalated", "esc-live")
     e2 = write("code", "code", "owner", "-", "escalated", "esc-closed")
-    d1 = write("cowork", "owner", "both", e2, "settled", "decision-closing-esc")
-    d2 = write("code", "owner", "both", "-", "settled", "decision-standalone")
+    d1 = write("cowork", "owner", "both", e2, "settled", "decision-closing-esc",
+               '--closes body ')
+    # Was `settled` with `re: -` until the writer stopped allowing it, and that refusal is
+    # M19: twenty-three real decisions were recorded exactly this way, and every one was
+    # invisible because the derivation excludes `settled`. A decision that opens work is
+    # `open`, addressed to whoever acts -- so the fixture cannot express the old shape either.
+    d2 = write("code", "owner", "both", "-", "open", "decision-standalone")
     # `re:` pointing at the other agent, because that is what the protocol requires and
     # the shipped writer now refuses without it. The hand-written block this fixture used
     # to be built from let an invalid `consensus` through for months, and nothing noticed
     # until the writer became a script that enforces its own rule.
-    c2 = write("cowork", "cowork", "code", q3, "consensus", "note")
+    c2 = write("cowork", "cowork", "code", q3, "consensus", "note", '--lands-in MANIFEST ')
     # The common case, and the one the fixture was missing: an agent has prepared
     # something and needs the person. `to: owner` + `state: open`, exactly as the
     # bootstrap prompts prescribe. A day of real use produced three of these and zero
     # escalations, and the documented person-facing query looked only at escalations.
     w1 = write("code", "code", "owner", "-", "open", "block-awaiting-you")
+    # Agreed with the person and not carried out. Without this message the fixture cannot
+    # tell the old person-facing derivation from the new one -- both filtered on
+    # `open|escalated`, both returned {e1, w1}, and a checker that returns the same answer
+    # for a correct and an incorrect query is not checking that query at all. It shipped
+    # blind through the round that fixed exactly this defect elsewhere.
+    w2 = write("cowork", "cowork", "owner", w1, "consensus", "agreed-with-you-not-done",
+               '--lands-in MANIFEST ')
 
     return {
-        "open": {q1, q2, w1},                       # q3 and q4 are answered by later re:
+        # d2 belongs here now, and its arrival IS M19: the same decision written the
+        # old way was `settled`, and every query in this method excluded it.
+        "open": {q1, q2, d2},                           # q3, q4 and now w1 are answered by a later re:
         "escalated": {e1},                          # e2 is closed by an owner decision
-        "waiting": {e1, w1},                        # addressed to the person, unanswered
+        # Addressed to the person and not closed. w1 is answered but NOT settled, and being
+        # answered is not being done -- that distinction is the whole point of this row.
+        "waiting": {e1, w1, w2, d2},
         "owner": {d1, d2},
         "consensus": {c1, c2},
         # Messages only. The queries use `2*.md` and not `*.md`, because the channel
@@ -373,12 +391,12 @@ def self_test(ch: Path, expect: dict[str, set[str]], tmp: Path) -> bool:
             print(f"       {f}")
         return False
 
-    def plant(frm, to, re_, state, slug) -> None:
-        write_message(ch, tmp, "code", frm, to, re_, state, slug)
+    def plant(frm, to, re_, state, slug, extra="") -> None:
+        write_message(ch, tmp, "code", frm, to, re_, state, slug, extra)
 
     mutations = [
         ("an extra decision by the person", "owner",
-         lambda: plant("owner", "both", "-", "settled", "mutant-decision")),
+         lambda: plant("owner", "both", "-", "open", "mutant-decision")),
         ("a new unanswered question", "open",
          lambda: plant("code", "cowork", "-", "open", "mutant-question")),
         ("a new live escalation", "escalated",

@@ -2,7 +2,7 @@
 name: gtd-with-agents
 description: Set up and run the three-party working method for a project driven by Claude Code and Claude Cowork together — a file-based channel the two agents use to talk to each other, an explicit delegation contract that records what the person decides and what they hand over, and the verification culture that makes agreement between two agents worth anything. Use this whenever someone is starting a project with both Claude Code and Cowork, asks how the two should coordinate, says they are tired of copying questions from one session and pasting answers into the other, asks "who decides what here", "how do I stay informed without approving everything", "how much can I delegate", or wants to install a working agreement, an exchange channel, or an approval policy between agents. Also use when a session arrives cold at a project that already has this method installed and needs to pick it up.
 metadata:
-  version: 0.2.0
+  version: 0.4.1
 ---
 
 # Get Things Done with Claude
@@ -15,13 +15,24 @@ the cable. They copy a question out of one session and paste an answer into the 
 that transcription precision is lost and work is gained. This method replaces the cable with a
 directory of files that both agents read and write.
 
-Three goals, and they matter equally:
+Three goals. **They are not independent, and the order is a dependency, not a ranking:**
 
-- **Minimise** the person's interaction
-- **Keep them informed** of what is being done, at all times
-- **Guarantee** that what is theirs to decide, they decide — always
+1. **They can find out where things stand in two minutes, whenever they choose** — by asking, not
+   by being told, and the answer does not lie.
+2. **They can leave and come back at any point, at a bounded cost, with no agent waiting on them.**
+   If something stopped while they were away, it was classified wrong.
+3. **What is theirs to decide, they decide.** Always.
 
-The third is not a nice-to-have. Delegation without a floor is not efficiency, it is opacity.
+Each is falsifiable with a stopwatch or a diary, which *"minimise the person's interaction"* was
+not. Counting approvals optimised the wrong quantity: twenty questions batched into a moment they
+choose cost far less than five spread over an hour, because the second kind destroys the
+possibility of doing anything else. What they experience is not a count, it is being tethered.
+
+**And 1 is the condition for 2.** Someone with no way of knowing what is happening does not get
+freed by removing their approvals — they get left watching the chat out of ignorance instead of
+obligation. Cutting doors without building the accounting is asking them to trust blind.
+
+Goal 3 is not a nice-to-have either. Delegation without a floor is not efficiency, it is opacity.
 
 ---
 
@@ -33,11 +44,20 @@ Two situations. Read which one you are in before doing anything.
 delegation questionnaire, create the channel, write the configuration, hand over the two
 bootstrap prompts.
 
-**B · The configuration already exists.** Do not run the questionnaire again. Read the
-configuration file, read the channel from oldest to newest, and report where things stand.
-`assets/bootstrap-cowork.md` is written for exactly this case.
+**B · The configuration already exists, and you are arriving cold.** Do not run the questionnaire
+again. **Read `reference/resuming.md` and follow it** — it is a procedure, not advice, and it ends
+with a stated criterion for when you are up to date.
 
-To tell them apart, look for a configuration file — by default `gtd-config.md` at the project
+In one line: read the configuration, ask `channel-status.sh` what is outstanding, read those
+messages and their direct parents, and **publish your reading to the channel before acting on
+it**. Nothing else.
+
+**Do not read the channel from oldest to newest.** That instruction used to live here and it was
+wrong: measured on one working day of two-agent use, the channel held 66 messages and 27,919
+words, of which the outstanding set was 8. Ingesting it spends the context the startup existed to
+protect, on a corpus that is mostly closed.
+
+To tell A from B, look for a configuration file — by default `gtd-config.md` at the project
 root. If you do not find it, ask before assuming: a project may keep it elsewhere.
 
 ---
@@ -162,6 +182,30 @@ Without that line the person approves a prompt **on every single message**, beca
 writer used to have — filename by substitution, body by heredoc — is one no permission pattern can
 cover. That was measured, and it is the highest recurring cost the method has.
 
+**Keep the rule narrow, and note what it costs to widen.** A leading wildcard is the only shape
+that reaches inside a compound command, which on a `deny` is conservative — it catches the
+dangerous command wherever it hides. On an `allow` it is the exact opposite: `Bash(*gtd-msg.sh*)`
+would approve, without asking, any command that merely *mentions* the file. Same wildcard,
+opposite consequence, because the two lists answer opposite questions.
+
+### Step 4a · Check that the writer writes, not that it is there
+
+```sh
+<path>/gtd-msg.sh --selftest
+```
+
+Six checks against a scratch directory, exercising the shipped writer rather than a copy of its
+logic, and it prints what it examined before its verdict. **Run it on the machine that will use
+it.** The useful question is never which systems the method supports — that is a list written from
+whatever was in front of whoever wrote it — but whether it works here, and only running it answers
+that.
+
+If it reports `the script is executable` as failed, the file is present and will not run: the
+documented invocation is `./gtd-msg.sh`, and a permission rule naming that path matches that text
+and no other. `chmod +x` fixes it where the filesystem carries an exec bit at all. Where it does
+not — an NTFS mount seen from WSL, some sync clients — `chmod` reports success and changes
+nothing, and the project has to move onto a native filesystem.
+
 ### Step 4b · The per-turn channel notice, which is two pieces
 
 **`assets/channel-status.sh` plus the registration that makes the tool run it.** Install both or
@@ -169,12 +213,15 @@ install neither: an executable asset with no registration is a file that never e
 the same shape as a permission rule the tool accepts and never evaluates.
 
 1. Copy the script to the implementing side, executable.
-2. Write the registration. In Claude Code that is a `UserPromptSubmit` hook in
-   `.claude/settings.json`, and the timeout is written explicitly because the 30-second default
-   **discards the hook's output in silence** when it expires:
+2. Write the registration **and the permission rules in the same edit.** In Claude Code that is a
+   `UserPromptSubmit` hook in `.claude/settings.json`; the timeout is explicit because the
+   30-second default **discards the hook's output in silence** when it expires:
 
 ```json
 {
+  "permissions": {
+    "allow": ["Bash(<path>/channel-status.sh*)", "Bash(<path>/gtd-msg.sh*)"]
+  },
   "hooks": {
     "UserPromptSubmit": [
       { "hooks": [
@@ -186,11 +233,34 @@ the same shape as a permission rule the tool accepts and never evaluates.
 }
 ```
 
-3. **Check that the hook fires, not that the file exists.** Ask the person to type any prompt and
+**The two `allow` lines are not optional and they are the skill paying for its own install.** This
+step installs two executables; until this round it granted permission to neither, and the measured
+result was that **the better-instrumented side had the worse start, because of the instrument**:
+the side with the hook sat in a modal on its very first turn while the side without one published
+in sixty seconds. Everything else about the floor is a claim about a project nobody has seen —
+this is just not leaving your own machinery unusable.
+
+3. **Check the derivation before checking the wiring**, because they fail differently and only
+   one of them is visible:
+
+   ```sh
+   <path>/channel-status.sh --selftest
+   ```
+
+   Six assertions over a synthetic channel built to contain the case this derivation exists for:
+   a thread both agents agreed on that nobody carried out. It runs in a scratch directory and
+   touches nothing of yours.
+4. **Check that the hook fires, not that the file exists.** Ask the person to type any prompt and
    report whether the notice appears. Two pieces means two ways to have done half the job, and
    both of them leave the script on disk looking installed.
-4. **Probe it against a channel with something in it.** Over an empty one it prints nothing and
+5. **Probe it against a channel with something in it.** Over an empty one it prints nothing and
    looks correct, which is the blind check this method exists to catch.
+
+**Say what will show up, or the first report will be a bug report.** The notice lists `consensus`
+alongside `open`, because agreed is not done and only a `settled` naming a message closes it. On a
+busy channel that means items both agents signed off on and neither finished. Some of them will be
+finished work whose closing note was written without a `re:` — one line of noise, cleared by
+writing the `settled` that names the file.
 
 Then record it in the configuration, including what it does **not** do: it fires when the person
 types, so a message written mid-milestone surfaces at the next turn rather than immediately, and
@@ -243,9 +313,15 @@ in the plugin cache, under a temporary path that gets regenerated, so the path h
 rather than remembered:
 
 ```sh
-SRC=$(find /var/folders -type d -name gtd-with-agents 2>/dev/null | head -1)
+SRC=$(find "${TMPDIR:-/tmp}" /var/folders -type d -name gtd-with-agents 2>/dev/null | head -1)
+test -n "$SRC" || { echo "FAILED: no skill directory found under TMPDIR or /var/folders"; exit 1; }
 mkdir -p .claude/skills && cp -R "$SRC" .claude/skills/
 ```
+
+The cache lives under the system temporary directory, which is `/var/folders` on macOS and
+`$TMPDIR` elsewhere, so both get searched. **The guard is the point**: with no match, `SRC` is
+empty and `cp -R "" .claude/skills/` copies nothing while reporting an error about an argument
+rather than about the skill. Naming the failure costs one line.
 
 Where a release bundle *is* available, unzip works instead. **Give them one of these, not several.**
 
@@ -337,6 +413,7 @@ rather than all of them.
 
 | | |
 |---|---|
+| `reference/resuming.md` | **Arriving cold at a project that already runs this.** The derivation as front door, what to read, what not to read, and when you are up to date |
 | `reference/roles.md` | The three parts, and the **state/events frontier** that makes review possible |
 | `reference/protocol.md` | The channel: file names, front matter, immutability, and why each choice |
 | `reference/approvals.md` | The questionnaire, the traffic-light triage, the floor |
@@ -385,17 +462,49 @@ measuring the same object.
 
 ## Keeping the person informed
 
-Delegation without information is not efficiency, it is opacity — so the questionnaire also asks
-how much they want to read and how often, and that answer has to produce something real.
+Goal 1 is *pull*, not push: they ask, in under two minutes, without asking either agent. Write the
+command into the configuration and check it returns something before claiming it works.
 
-At minimum, the person can answer *"what has happened since yesterday?"* with one command over
-the channel and the project's own record, without asking either agent. Write that command into
-the configuration file, for their project, and check it returns something before you claim it
-works.
+**A consensus that changes a plan, a guide or a scope lands in a permanent project file in the same
+milestone, or it did not happen.** `--lands-in` makes the writer refuse without it; `--audit`
+checks afterwards that the path exists and is tracked.
 
-And the reverse direction is what makes it honest: **a consensus that changes a plan, a guide or
-a scope lands in a permanent project file in the same milestone, or it did not happen.** The
-channel holds the deliberation; the project holds the decision.
+### When they ask what happens next
+
+Three sections, and nothing that does not fit in one of them:
+
+| | |
+|---|---|
+| **What I am doing now** | Without asking. Already started |
+| **What you run** | Complete blocks, ready to paste |
+| **What you decide** | Options, the cost of each, and a recommendation |
+
+**Every observation carries a proposal, or it is not finished.** *"The uncommitted tree is fourteen
+entries and grows every half hour"* is true, well measured, and useless: it names a rising cost
+without saying how to stop paying it. The method demands rigour in observing and demanded nothing
+of turning that into action, so a diligent agent produces an impeccable diagnosis and stops —
+because stopping there was never flagged.
+
+**After a DECIDE is answered, execution is delegated** unless the answer says otherwise. The
+contract splits decision rights and says nothing about who resumes the work once the decision
+exists; the silence resolves as waiting, which is the most expensive default there is. Measured: a
+decision taken hours earlier, both agents believing it belonged to the other — *"nobody has told me
+to do anything, why is it still not done?"*
+
+**The person is never the dispatcher.** *"What would you like me to work on?"* is a failure, not a
+courtesy. An agent with spare capacity proposes what it will do and does it, or says what blocks it.
+
+### How much of the session belongs to the method
+
+The method's own queue always has work — a stale consensus to close, a rule to write, a figure to
+re-measure — and the project's does not, so an agent with spare capacity drains the wrong one.
+Every rule leaves an artefact in seconds; reviewing two hundred lines produces nothing visible for
+twenty minutes.
+
+**The smell test: if at the close of a session the method's artefacts outnumber the project's, the
+method ate the session.** Group its maintenance at milestone boundaries rather than *whenever you
+notice*, and make the last act of the session belong to the project, as the first act belongs to
+the method.
 
 ---
 
