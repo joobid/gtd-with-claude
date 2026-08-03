@@ -68,19 +68,26 @@ real answer, not a failure.
 **One hop, not the chain.** Measured on that same channel, from the implementing side:
 
 ```
-the derivation names            8 messages   14.9% of the channel
-plus one hop up                14 messages   25.9%
-plus every decision on file    35 messages   50.8%
-plus the full reply chains     48 messages   72.1%
+the derivation names            8 of 66 messages    14.9% of the channel's words
+plus one hop up                14 of 66            25.9%
+plus every decision on file    35 of 66            50.8%
+plus the full reply chains     48 of 66            72.1%
 ```
+
+**The percentages are of words, and the counts are of messages** — both are stated because they
+give different answers and the second reads like the first. Row one is 8 of 66 messages, which is
+12% by count and 14.9% by volume; the number that matters for context is the volume.
 
 The third row is the trap, and it is the instruction most people write: *"read what the person
 has already decided."* On this channel that is 22 messages, and obeying it at startup costs
 **three times the pending set** and more than half the channel. It is a read-everything
 instruction wearing sensible clothes.
 
-So decisions are **not** read on arrival. They are queried at the moment you are about to
-propose something — see step 6.
+So the decisions are not *read* on arrival — but their **index** is, and you do not have to ask
+for it. `gtd-msg.sh` prints it whenever you write to the person, and `--decisions` prints it on
+demand: one line per decision, filename and heading, never bodies. That is the difference between
+a level-1 mechanism and a rule. The rule was there, and it was obeyed **23 seconds too late** —
+the gap was published, and the person's answer had been on the channel for nine minutes.
 
 ### 4 · When one hop is not enough, that is a finding
 

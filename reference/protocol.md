@@ -159,49 +159,34 @@ not read cannot audit it — and the method promises to keep them informed.
 ends in agreement, with the work never carried out and no closing note written, stays pending —
 and that is correct, not a leak.
 
-This was a real defect and it was created by the fix for another one. While nothing read the
-channel automatically, `open` and `consensus` got the same amount of attention, which is to say
-none in particular, so conflating *agreed* with *agreed and done* cost nothing. The moment the
-per-turn notice started deriving pending work from `open|escalated`, `open` became the state that
-gets seen and `consensus` the state that does not. Agreed-and-unexecuted work went systematically
-invisible — **and it was the fix that made it invisible.** Measured on a 64-message channel: the
-old derivation surfaced 2 items where 4 were genuinely outstanding, and the one it hid longest was
-three agreed, unimplemented requirements of a privacy guard.
+The writer enforces the three rules that follow, so none of them is something to remember:
 
-There is a second, finer half. **Being answered is not being done.** The old criterion treated any
-later `re:` as closure, so a reply — even one that only asks something back — retired the message
-it replied to.
+| Written | Refused unless | Because |
+|---|---|---|
+| `--state consensus` | `--re` names the other agent's message | One agent alone asserting a two-party fact |
+| `--state consensus` | `--lands-in <path>` | An approved sprint plan lived a day in a channel outside version control |
+| `--state settled` | `--closes "<text quoted from that message>"` | A `settled` that also asks or instructs buries it where no derivation looks |
 
-So, two rules, and the second is what makes the first survive contact:
+**`--closes` demands a selection, never a classification, and that is the general principle.** A
+guard that asks you to *pick* fails loudly when you have not looked. A guard that tries to *detect*
+fails silently whenever the text does not resemble its pattern: a proposed detector for "this
+settled also asks something" — refuse if a line ends in `?` — fired on **0 of 29** real messages,
+including both true positives, because the buried question was written as prose.
 
-- **Close what you finish.** When the agreed thing is done, write a `settled` and make its `re:`
-  name the message it closes.
-- **A `settled` closes exactly what its `re:` names, and nothing else.** On the real channel 9 of
-  24 settled messages carried `re: -`. That is not sloppiness — a decision recorded with
-  `from: owner` opens a topic rather than answering one — but it means those nine closed nothing,
-  and the four false positives in that measurement were all of this shape: the work was finished
-  and the closing note was written somewhere other than on the chain.
+It also closes M19. Twenty-three decisions by the person were written `settled` with `re: -`, and
+the derivation excludes `settled`, so all twenty-three were invisible to the other agent — one
+answer arrived nine minutes before an agent asked the same thing again. **A decision that opens
+work is not closed.** It is `open`, addressed to whoever has to act.
 
-**The noise is accepted on purpose.** In a check whose failure mode is silence, coverage beats
-precision. A false positive costs one line of context and is cleared by writing the `settled` that
-was missing, which is the behaviour the method wants anyway. The false negative it replaces hid a
-broken privacy control. They are not comparable, so they are not traded off as if they were.
+**The residual noise is accepted on purpose.** In a check whose failure mode is silence, coverage
+beats precision: a false positive costs one line and is cleared by writing the missing `settled`,
+which is the behaviour the method wants. The false negative it replaces hid a broken privacy
+control.
 
-**And the tempting simplification is wrong, which was also measured.** Closing a whole *thread*
-once anything in it settles is cleaner and produced zero false positives on the same channel — and
-it lost one of the two messages the fix exists to surface, because a `settled` in that thread had
-closed a different item earlier. A thread here is a rolling conversation, not one topic. The
-criterion has to walk the reply chain.
-
-### Why `consensus` needs `re:`
-
-A message is one immutable file written by **one** agent, and that agent types its own front
-matter. Without a constraint, `state: consensus` is a unilateral assertion of a bilateral fact —
-one agent declaring that both agreed, with nothing the other had to write.
-
-That is not a discipline problem, it is a format problem: the format offered no way to do it
-correctly. Requiring `re:` to point at the other agent's message makes the rule **checkable**
-rather than aspirational — a consensus with `re: -` is one-sided and authorises nothing.
+**And the tempting simplification is wrong, which was measured.** Closing a whole *thread* once
+anything in it settles is cleaner and produced zero false positives on the same channel — and lost
+one of the two messages the fix exists to surface, because a `settled` there had closed a different
+item earlier. A thread is a rolling conversation, not one topic.
 
 The concrete failure it closes: the person sets something to CONSENSUS, one agent writes "agreed,
 proceeding", acts, and the other never read it. The record says consensus, and the record is what
@@ -218,29 +203,20 @@ escalated, and the escalation query is the person's only alarm.
 
 ## Everything the person is asked goes in the channel too
 
-This is the part that is easy to leave out, and leaving it out reopens the hole the channel was
-built to close.
-
-When an agent asks the person something — a permission prompt, a design question, a choice
-between two ways — **the person answers inside one session, and the other session never learns it
-happened.** That is an event that leaves no state. The second agent then reasons about a project
-shaped by a decision it cannot see, and the likeliest symptom is that it proposes something
-already ruled out.
+When an agent asks the person something — a permission prompt, a design question, a choice between
+two ways — **they answer inside one session and the other session never learns it happened.** An
+event that leaves no state. The second agent then reasons about a project shaped by a decision it
+cannot see, and proposes something already ruled out.
 
 So: **anything the person is asked, and what they answered, is written to the channel by whichever
-agent heard it — and read by the other before it proposes anything.**
+agent heard it.** Both directions. Getting only the implementing side looks complete because that
+side asks more often, but **the bigger decisions — scope, plan, what is in and out — get taken on
+the reviewing side**, and those are the ones an implementing agent walks into blind.
 
-**Both directions, and both halves.** It is a rule about a pair:
-
-| Who asks | Who writes it | Who has to read it |
-|---|---|---|
-| Code asks the person — a permission prompt, a choice mid-implementation | Code | Cowork, before reviewing or planning against a project that answer changed |
-| Cowork asks the person — a questionnaire answer, a design decision, a scope call | Cowork | Code, before implementing something the person already ruled out |
-
-Getting only the first half is a common and asymmetric mistake: it looks complete, because the
-implementing agent asks more often. But **Cowork is where the bigger decisions get taken** —
-scope, plan, what is in and out — and those are exactly the ones an implementing agent walks into
-blind.
+**Reading them back is now a level-1 mechanism, because the rule alone was not enough.** The writer
+prints the decision index whenever a message goes to the person, and `gtd-msg.sh --decisions` prints
+it on demand. The rule *"check what they already decided"* was obeyed **23 seconds too late**: an
+agent published a gap the person had answered nine minutes earlier.
 
 ```
 ---
@@ -263,48 +239,31 @@ decide it. Worth knowing when it comes round again.
 
 Five things about that shape:
 
-- **`from: owner`**, whoever typed the file. The information originates with the person, and
-  `grep -E '^from: +owner$'` then returns every decision they have made in one list.
-- **`to: both`.** An owner decision binds both agents, including the one that wrote it down —
-  `to: cowork` would formally excuse the author from ever re-reading it.
-- **The first line names the agent that recorded it, how, and that it was shown back.** Whether it
-  came from a modal prompt or from ordinary conversation changes how much is verbatim.
-- **`ASKED:` and `ANSWERED:` in the person's language.** They are the only part of this system the
-  person needs to be able to audit, and they are a paraphrase written about them by someone else.
+- **`from: owner`**, whoever typed the file, so `--decisions` returns every one in a list.
+- **`to: both`.** An owner decision binds both agents, including the one that wrote it down.
+- **The first line names who recorded it, how, and that it was shown back.**
+- **`ASKED:` and `ANSWERED:` in the person's language** — the only part of this system they need to
+  be able to audit, and a paraphrase written about them by somebody else.
 - **Say when the answer diverges from the configuration.** Somebody deciding something they had
-  delegated is information that the configuration is wrong — and it is exactly what nobody
-  notices, because each individual answer feels reasonable.
+  delegated is evidence the configuration is wrong, and nobody notices because each single answer
+  feels reasonable.
 
-### Show it back, in the turn you write it
+**A decision that opens work is not `settled`.** `settled` means closed, and the derivation excludes
+it — twenty-three decisions were written that way and all twenty-three were invisible to the other
+agent. The writer now refuses `settled` without `--closes`, so a decision that instructs something
+is `open`, addressed to whoever acts.
 
-A `from: owner` message is a **paraphrase**, written by an agent, unsupervised, immutable, and
-given the highest standing in the system — both agents treat it as not reopenable.
+**Show it back in the turn you write it**, in one line, in their language. It is a paraphrase
+written by an agent, unsupervised and immutable, that both agents will treat as not reopenable —
+the one place this method would otherwise act on a summary. A "no" produces a correcting message.
 
-Everywhere else this method forbids acting on a paraphrase: *a verdict on somebody's reading is a
-verdict on the wrong object* (`roles.md`). The person's own decisions were the one place where the
-paraphrase was the only representation that existed.
+**A change of mind is a new `from: owner` message carrying `re:` at the one it revokes.** The most
+recent on a subject governs; without the link the revocation is invisible to anyone reading by grep
+rather than by date, which is how these get read.
 
-So the agent **shows the person the `ASKED:`/`ANSWERED:` block in the turn it writes it**, in one
-line, in their language. A "no" produces a new message correcting the old one — the correction is
-a new file, like every correction here.
-
-### When a decision replaces an earlier one
-
-Files are immutable, so a change of mind is a **new** `from: owner` message. Two rules, because
-without them one agent honours last week's decision and another honours whatever `ls` returns
-last, and both readings are defensible:
-
-- **The most recent `from: owner` message on a subject governs.**
-- **It must carry `re:` pointing at the one it revokes.** Without that link the revocation is
-  invisible to anyone reading by grep rather than by date, which is how these get read.
-
-### What this does and does not fix
-
-It does **not** let Cowork answer a permission prompt. Those are modal and no file reaches them;
-that limit is unchanged.
-
-It does mean Cowork **knows the prompt happened, what was asked, and what was decided** — which is
-the part that was actually costing something.
+None of this lets the reviewing agent answer a permission prompt — those are modal and no file
+reaches them. It means that agent **knows the prompt happened and what was decided**, which is the
+part that was costing something.
 
 ---
 
@@ -506,71 +465,31 @@ is recorded — which is a `to: owner` message, and that one is already greppabl
 
 ## Finding what is live
 
-**These are not one-liners, and the reason matters.** Because files are immutable, an answered
-message still says `state: open` for ever. A bare `grep -E '^state: +open$'` returns *every question
-ever asked*, which at month three is sixty paths the person cannot triage. The state of the
-conversation is derived, so the query has to do the derivation.
-
-**Each of these declares what it examined, and refuses to answer over nothing.** A query that
-returns zero from the wrong directory looks exactly like a healthy channel with nothing open —
-which is the blind state §1 of `verification.md` defines, and it is not an approval. Run them
-from inside the channel, and let them say so:
+**The derivation is a script, and it is the only copy.** Because files are immutable, an answered
+message still says `state: open` for ever, so a bare grep returns every question ever asked. The
+state of the conversation is derived, and hand-copying that derivation into documentation is how
+four copies of it drifted apart while each one looked right.
 
 ```sh
-n=$(ls -1 2*.md 2>/dev/null | wc -l)
-[ "$n" -eq 0 ] && { echo "BLIND: no messages here. Wrong directory, or no channel yet." >&2; exit 2; }
-echo "EXAMINED: $n messages"
+channel-status.sh --channel <channel> --me code|cowork|owner
+channel-status.sh --channel <channel> --count
+channel-status.sh --channel <channel> --audit <runs dir>
+gtd-msg.sh --channel <channel> --decisions
 ```
 
-```sh
-# Open questions: state: open, minus anything a later message answers.
-answered=$(grep -hE '^re: +' 2*.md | awk '{print $2}' | grep -v '^-$' | sort -u)
-for f in $(grep -lE '^state: +open$' 2*.md); do
-  echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
-done
-```
+Pending is: addressed to me, not `settled`, and with no `settled` down its own reply chain.
+`--selftest` proves it on six cases, one of them the message that used to be lost.
 
-```sh
-# What waits on the person: addressed to them, with no `settled` down its own reply chain.
-# NOT `open|escalated`: `consensus` is agreed, not done, and filtering it out is how work
-# both parties signed off on stops being visible to anyone.
-closed=""
-for s in $(grep -lE '^state: +settled$' 2*.md); do
-  cur="$s"
-  while :; do
-    p=$(sed -n 's/^re: *//p' "$cur" | head -1)
-    if [ -z "$p" ] || [ "$p" = "-" ] || [ ! -f "$p" ]; then break; fi
-    case " $closed " in *" $p "*) break ;; esac
-    closed="$closed $p"
-    cur="$p"
-  done
-done
-for f in $(grep -lE '^to: +(owner|both)$' 2*.md); do
-  if grep -qE '^state: +settled$' "$f"; then continue; fi
-  case " $closed " in *" $f "*) continue ;; esac
-  echo "$f"
-done
-```
+**`escalated` on its own is the wrong object, and the difference is measured.** Over a full
+working day the channel held **zero** escalations and three unanswered messages addressed to the
+person, one of them a command block waiting to be run. `escalated` is rare *by design*, because
+this method spends its effort making two agents exchange facts instead of escalating — so the
+better it works, the emptier that query gets, and its failure mode is returning zero, which reads
+as *nothing needs you*. `--me owner` is the query that answers it.
 
-**`escalated` on its own is not that query, and the difference is measured.** Over a full working
-day of real use — twenty-four messages, three blocked moments, four batches waiting for approval —
-the channel held **zero** escalations and three unanswered messages addressed to the person. A
-query restricted to escalations returned nothing, all day, while a red command block sat waiting.
-
-That is not a bug in it; it does exactly what it says. It is the **wrong object**. `escalated` is
-rare *by design*, because this method spends its effort making two agents exchange facts instead
-of escalating — so the better it works, the emptier that query gets, and its failure mode is
-returning zero, which reads as *nothing needs you*.
-
-```sh
-grep -lE '^from: +owner$' 2*.md     # every decision the person has made
-
-ls -1 2*.md | tail -20                   # the last twenty messages, in order
-```
-
-**How an escalation is closed:** a message `from: owner` whose `re:` points at it. That makes
-"what needs me" computable, and it is consistent with everything else — a decision closes a
-question the same way an answer closes one.
+**Counting is `--count` and not a glob.** `grep -l '^state: open' *.md` returned 33 where there
+were 32, three times in eighteen hours across three sessions: the channel keeps its own README,
+that README documents the vocabulary with `state: open` in column 0, and it counts itself.
 
 ### When the channel gets long
 

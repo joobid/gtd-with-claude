@@ -2,7 +2,7 @@
 name: gtd-with-agents
 description: Set up and run the three-party working method for a project driven by Claude Code and Claude Cowork together — a file-based channel the two agents use to talk to each other, an explicit delegation contract that records what the person decides and what they hand over, and the verification culture that makes agreement between two agents worth anything. Use this whenever someone is starting a project with both Claude Code and Cowork, asks how the two should coordinate, says they are tired of copying questions from one session and pasting answers into the other, asks "who decides what here", "how do I stay informed without approving everything", "how much can I delegate", or wants to install a working agreement, an exchange channel, or an approval policy between agents. Also use when a session arrives cold at a project that already has this method installed and needs to pick it up.
 metadata:
-  version: 0.3.0
+  version: 0.4.0
 ---
 
 # Get Things Done with Claude
@@ -15,13 +15,24 @@ the cable. They copy a question out of one session and paste an answer into the 
 that transcription precision is lost and work is gained. This method replaces the cable with a
 directory of files that both agents read and write.
 
-Three goals, and they matter equally:
+Three goals. **They are not independent, and the order is a dependency, not a ranking:**
 
-- **Minimise** the person's interaction
-- **Keep them informed** of what is being done, at all times
-- **Guarantee** that what is theirs to decide, they decide — always
+1. **They can find out where things stand in two minutes, whenever they choose** — by asking, not
+   by being told, and the answer does not lie.
+2. **They can leave and come back at any point, at a bounded cost, with no agent waiting on them.**
+   If something stopped while they were away, it was classified wrong.
+3. **What is theirs to decide, they decide.** Always.
 
-The third is not a nice-to-have. Delegation without a floor is not efficiency, it is opacity.
+Each is falsifiable with a stopwatch or a diary, which *"minimise the person's interaction"* was
+not. Counting approvals optimised the wrong quantity: twenty questions batched into a moment they
+choose cost far less than five spread over an hour, because the second kind destroys the
+possibility of doing anything else. What they experience is not a count, it is being tethered.
+
+**And 1 is the condition for 2.** Someone with no way of knowing what is happening does not get
+freed by removing their approvals — they get left watching the chat out of ignorance instead of
+obligation. Cutting doors without building the accounting is asking them to trust blind.
+
+Goal 3 is not a nice-to-have either. Delegation without a floor is not efficiency, it is opacity.
 
 ---
 
@@ -202,12 +213,15 @@ install neither: an executable asset with no registration is a file that never e
 the same shape as a permission rule the tool accepts and never evaluates.
 
 1. Copy the script to the implementing side, executable.
-2. Write the registration. In Claude Code that is a `UserPromptSubmit` hook in
-   `.claude/settings.json`, and the timeout is written explicitly because the 30-second default
-   **discards the hook's output in silence** when it expires:
+2. Write the registration **and the permission rules in the same edit.** In Claude Code that is a
+   `UserPromptSubmit` hook in `.claude/settings.json`; the timeout is explicit because the
+   30-second default **discards the hook's output in silence** when it expires:
 
 ```json
 {
+  "permissions": {
+    "allow": ["Bash(<path>/channel-status.sh*)", "Bash(<path>/gtd-msg.sh*)"]
+  },
   "hooks": {
     "UserPromptSubmit": [
       { "hooks": [
@@ -218,6 +232,13 @@ the same shape as a permission rule the tool accepts and never evaluates.
   }
 }
 ```
+
+**The two `allow` lines are not optional and they are the skill paying for its own install.** This
+step installs two executables; until this round it granted permission to neither, and the measured
+result was that **the better-instrumented side had the worse start, because of the instrument**:
+the side with the hook sat in a modal on its very first turn while the side without one published
+in sixty seconds. Everything else about the floor is a claim about a project nobody has seen —
+this is just not leaving your own machinery unusable.
 
 3. **Check the derivation before checking the wiring**, because they fail differently and only
    one of them is visible:
@@ -441,17 +462,49 @@ measuring the same object.
 
 ## Keeping the person informed
 
-Delegation without information is not efficiency, it is opacity — so the questionnaire also asks
-how much they want to read and how often, and that answer has to produce something real.
+Goal 1 is *pull*, not push: they ask, in under two minutes, without asking either agent. Write the
+command into the configuration and check it returns something before claiming it works.
 
-At minimum, the person can answer *"what has happened since yesterday?"* with one command over
-the channel and the project's own record, without asking either agent. Write that command into
-the configuration file, for their project, and check it returns something before you claim it
-works.
+**A consensus that changes a plan, a guide or a scope lands in a permanent project file in the same
+milestone, or it did not happen.** `--lands-in` makes the writer refuse without it; `--audit`
+checks afterwards that the path exists and is tracked.
 
-And the reverse direction is what makes it honest: **a consensus that changes a plan, a guide or
-a scope lands in a permanent project file in the same milestone, or it did not happen.** The
-channel holds the deliberation; the project holds the decision.
+### When they ask what happens next
+
+Three sections, and nothing that does not fit in one of them:
+
+| | |
+|---|---|
+| **What I am doing now** | Without asking. Already started |
+| **What you run** | Complete blocks, ready to paste |
+| **What you decide** | Options, the cost of each, and a recommendation |
+
+**Every observation carries a proposal, or it is not finished.** *"The uncommitted tree is fourteen
+entries and grows every half hour"* is true, well measured, and useless: it names a rising cost
+without saying how to stop paying it. The method demands rigour in observing and demanded nothing
+of turning that into action, so a diligent agent produces an impeccable diagnosis and stops —
+because stopping there was never flagged.
+
+**After a DECIDE is answered, execution is delegated** unless the answer says otherwise. The
+contract splits decision rights and says nothing about who resumes the work once the decision
+exists; the silence resolves as waiting, which is the most expensive default there is. Measured: a
+decision taken hours earlier, both agents believing it belonged to the other — *"nobody has told me
+to do anything, why is it still not done?"*
+
+**The person is never the dispatcher.** *"What would you like me to work on?"* is a failure, not a
+courtesy. An agent with spare capacity proposes what it will do and does it, or says what blocks it.
+
+### How much of the session belongs to the method
+
+The method's own queue always has work — a stale consensus to close, a rule to write, a figure to
+re-measure — and the project's does not, so an agent with spare capacity drains the wrong one.
+Every rule leaves an artefact in seconds; reviewing two hundred lines produces nothing visible for
+twenty minutes.
+
+**The smell test: if at the close of a session the method's artefacts outnumber the project's, the
+method ate the session.** Group its maintenance at milestone boundaries rather than *whenever you
+notice*, and make the last act of the session belong to the project, as the first act belongs to
+the method.
 
 ---
 

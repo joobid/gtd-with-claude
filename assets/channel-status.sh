@@ -51,10 +51,113 @@ while [ $# -gt 0 ]; do
     --me)      ME="$2";      shift 2 ;;
     --json)    JSON=1;       shift ;;
     --selftest) SELFTEST=1;  shift ;;
+    --count)   MODE=count;   shift ;;
+    --whoami)  MODE=whoami;  shift ;;
+    --audit)   MODE=audit; RUNS="${2:-}"; if [ -n "${2:-}" ]; then shift 2; else shift; fi ;;
     -h|--help) sed -n '3,38p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "channel-status: unknown argument: $1" >&2; exit 2 ;;
   esac
 done
+MODE="${MODE:-notice}"; RUNS="${RUNS:-}"
+
+# A-02 at level 1. `grep -l '^state: open' *.md` returned 33 where there were 32, three
+# times in eighteen hours across three sessions: the channel keeps its own README, and
+# that README documents the vocabulary with a line starting `state: open` in column 0, so
+# it counts itself. Nobody was careless -- the glob was wrong and looked right.
+# One helper, so a count cannot drift from the derivation that uses it.
+messages() { ls -1 "$1"/2*.md 2>/dev/null || true; }
+
+if [ "$MODE" = count ]; then
+  n=$(messages "$CHANNEL" | grep -c . || true)
+  other=$(ls -1 "$CHANNEL"/*.md 2>/dev/null | grep -cv '/2[0-9]' || true)
+  echo "EXAMINED: $CHANNEL"
+  echo "  messages:     $n"
+  echo "  not messages: $other  (README and template -- never counted, never grepped as messages)"
+  exit 0
+fi
+
+# A-08 at level 1. Each side can observe its own store and nothing else. An agent asked
+# about the other side's install measured its OWN and reported it as the other's -- and it
+# had no way to notice, because the measurement succeeded. So the only honest instrument
+# measures this side and hands you a line to publish; the other side publishes its own.
+if [ "$MODE" = whoami ]; then
+  found=""; v=""
+  for d in "$HOME/.claude/skills/gtd-with-agents" ".claude/skills/gtd-with-agents"; do
+    if [ -d "$d" ]; then
+      found="$found $d"
+      if [ -z "$v" ]; then
+        v=$(sed -n 's/^  version: *//p' "$d/SKILL.md" 2>/dev/null | head -1)
+      fi
+    fi
+  done
+  echo "EXAMINED: this side only. Nothing here can see the other agent's store."
+  if [ -z "$found" ]; then
+    echo "  gtd-with-agents: not installed on this side"
+  else
+    echo "  gtd-with-agents:${found}  version ${v:-unknown}"
+  fi
+  echo "  Publish this as a message. Do not write it into the other agent's row."
+  exit 0
+fi
+
+# A-07 and A-20 at level 3: what cannot be refused at the moment of the act, but can be
+# found afterwards -- on the condition C attaches, that an alarm with no scheduled reading
+# is not a control. This is the reading. It belongs at a milestone boundary.
+if [ "$MODE" = audit ]; then
+  fails=0
+  echo "=== consensus that never landed (A-07) ==="
+  n=0; bad=0
+  for f in $(messages "$CHANNEL"); do
+    p=$(sed -n 's/^lands-in: *//p' "$f" | head -1)
+    [ -n "$p" ] || continue
+    n=$((n + 1))
+    if [ ! -e "$p" ]; then
+      echo "  MISSING   $p   ($(basename "$f"))"; bad=$((bad + 1))
+    elif git ls-files --error-unmatch "$p" >/dev/null 2>&1; then
+      echo "  tracked   $p"
+    else
+      echo "  UNTRACKED $p   ($(basename "$f"))"; bad=$((bad + 1))
+    fi
+  done
+  echo "EXAMINED: $n messages carrying lands-in, $bad of them not in version control"
+  [ "$bad" -eq 0 ] || fails=$((fails + 1))
+
+  echo
+  echo "=== personal data in the run directory (A-20) ==="
+  if [ -z "$RUNS" ]; then RUNS=$(dirname "$CHANNEL"); fi
+  if [ ! -d "$RUNS" ]; then
+    echo "  BLIND: $RUNS is not a directory. This is not a pass."
+    exit 2
+  fi
+  files=$(find "$RUNS" -type f 2>/dev/null | wc -l | tr -d ' ')
+  [ "$files" -gt 0 ] || { echo "  BLIND: no files under $RUNS. This is not a pass."; exit 2; }
+  # Each grep is captured on its own line, and the no-match case is made explicit.
+  # Piping grep straight into wc under `set -o pipefail` kills the script when there
+  # is nothing to find: exit 1 propagates, the assignment fails, and the report stops
+  # mid-section looking finished. The empty result is the common path, so the scanner
+  # died silently exactly when it had good news -- found by running it, not by reading it.
+  mhits=$(grep -rlE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' "$RUNS" 2>/dev/null || true)
+  ihits=$(grep -rhoE '\b[0-9]{8}[A-HJ-NP-TV-Z]\b' "$RUNS" 2>/dev/null | sort -u || true)
+  mail=$(printf '%s' "$mhits" | grep -c . || true)
+  idn=$(printf '%s' "$ihits" | grep -c . || true)
+  echo "  files scanned:            $files"
+  echo "  files containing an email:  $mail"
+  echo "  distinct national-ID shapes: $idn"
+  echo "EXAMINED: two patterns over $files files under $RUNS."
+  echo "NOT EXAMINED: names, addresses, phone numbers, bank details, and any identifier"
+  echo "  whose shape this does not know. A clean result here is not a clean directory."
+  if [ "$mail" -gt 0 ] || [ "$idn" -gt 0 ]; then
+    echo
+    echo "  This directory is normally outside version control, so the project's own barrier"
+    echo "  has never looked at it. Outside git is not outside disk: talking about a value"
+    echo "  copies it here, and removing it from the tree does not remove it from here."
+    fails=$((fails + 1))
+  fi
+  echo
+  [ "$fails" -eq 0 ] && { echo "AUDIT CLEAN on what it examined."; exit 0; }
+  echo "AUDIT: $fails of 2 areas need a decision."
+  exit 1
+fi
 # `owner` is here because "what is waiting on the person" is the objective this whole method
 # promises, and it is the same derivation with a different audience. Leaving it out meant the
 # only way to ask it was a hand-written query that nobody kept in step with this one.
@@ -109,6 +212,42 @@ if [ -n "$SELFTEST" ]; then
   else
     printf '  ok    --me owner does not pick up messages addressed to the agents\n'
   fi
+
+  # --- Added this round, each with its positive control ---------------------
+  assert() {
+    checks=$((checks + 1))
+    if printf '%s' "$2" | grep -q "$3"; then printf '  ok    %s\n' "$1"
+    else printf '  FAIL  %s\n' "$1"; fails=$((fails + 1)); fi
+  }
+
+  # A-02. The README goes in carrying the exact line that caused three wrong counts,
+  # in column 0. If the count is 8 the non-messages were excluded; if it is 9 they
+  # were not. Without this file in the fixture the assertion proves nothing.
+  printf -- '# Channel\n\nstate: open | consensus | settled | escalated\n' > "$probe/README.md"
+  assert "counts messages and never the README (A-02)" \
+         "$(bash "$0" --channel "$probe" --count 2>&1)" "messages: *8"
+
+  assert "--whoami says out loud that it measured this side only (A-08)" \
+         "$(bash "$0" --whoami 2>&1)" "this side only"
+
+  # A-07 level 3: a lands-in path that does not exist has to be named.
+  printf -- '---\nfrom: code\nto: cowork\nre: -\nstate: consensus\nlands-in: docs/nowhere.md\nhead: clock:x\n---\n\n## c\n' \
+    > "$probe/20260101-000009-code-lands.md"
+  assert "--audit names a lands-in path that is not there (A-07)" \
+         "$(bash "$0" --channel "$probe" --audit "$probe" 2>&1 || true)" "MISSING *docs/nowhere.md"
+
+  # A-20. A scanner is trusted only after it has been seen to fire, so the fixture
+  # carries one address of the shape it looks for.
+  printf 'contact: someone@example.org\n' > "$probe/run.log"
+  assert "--audit finds an address left in the run directory (A-20)" \
+         "$(bash "$0" --channel "$probe" --audit "$probe" 2>&1 || true)" "containing an email: *1"
+
+  # And the failure mode that matters more than any hit: nothing to look at must not
+  # read as nothing to find.
+  empty="${TMPDIR:-/tmp}/cs-empty-$$"; mkdir -p "$empty"
+  assert "--audit aborts on an empty directory instead of approving" \
+         "$(bash "$0" --channel "$empty" --audit "$empty" 2>&1 || true)" "BLIND"
+  rmdir "$empty" 2>/dev/null || true
 
   printf 'EXAMINED: %d assertions over %d messages in a synthetic channel at %s\n' \
          "$checks" "$(ls -1 "$probe"/2*.md | wc -l | tr -d ' ')" "$probe"
