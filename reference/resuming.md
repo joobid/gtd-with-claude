@@ -98,11 +98,22 @@ another twenty messages costs the context you were protecting, and you still may
 
 ### 5 · Publish your reading before you act on it. This is the first act
 
+**Re-derive first, and if the number changed, say so in the message.** The list from step 2 is a
+photograph, and with two agents writing the channel moves underneath it: measured on a real cold
+start, *"the derivation named ten, and it grew by four while I was reading them."* Re-running costs
+nothing and the difference is the interesting part — a reading that silently describes a list that
+no longer exists is worse than one that says which four arrived late.
+
 Write **one** message to the channel, `to: owner`, `state: open`, containing:
 
-- what the derivation named, by filename
+- what the derivation named, by filename, **and what it names now**
 - what you understand the outstanding work to be, in your own words
 - **what you did not read, and what you could not reconstruct**
+- **whether anything needs the person** — and say so plainly when nothing does. The writer
+  refuses a message reaching them that does not declare which it is: `--decide "<the choice>"`
+  with `--blocks "<what stops until they answer>"`, or `--fyi`. If you cannot name what stops,
+  it is not a decision. Measured before that guard existed: 13 items in the person's queue,
+  **none of them carrying anything to act on**
 - what you intend to do next
 
 Then wait for it to be seen before starting work that depends on it.

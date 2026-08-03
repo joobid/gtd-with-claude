@@ -55,6 +55,7 @@ while [ $# -gt 0 ]; do
     --whoami)  MODE=whoami;  shift ;;
     --audit)   MODE=audit; RUNS="${2:-}"; if [ -n "${2:-}" ] && [ "${2#-}" = "$2" ]; then shift 2; else RUNS=""; shift; fi ;;
     --accept)  ACCEPT=1;   shift ;;
+    --fyi)     MODE=fyi;   shift ;;
     -h|--help) sed -n '3,38p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "channel-status: unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -298,6 +299,21 @@ if [ -n "$SELFTEST" ]; then
   exit 0
 fi
 
+if [ "$MODE" = fyi ]; then
+  [ -d "$CHANNEL" ] || { echo "BLIND: $CHANNEL is not a directory. This is not a pass." >&2; exit 2; }
+  cd "$CHANNEL"
+  n=$(ls -1 2*.md 2>/dev/null | grep -c . || true)
+  [ "$n" -gt 0 ] || { echo "BLIND: no messages under $CHANNEL. This is not a pass." >&2; exit 2; }
+  found=0
+  for f in $(grep -lE '^fyi: +true$' 2*.md 2>/dev/null || true); do
+    h=$(grep -m1 '^#' "$f" 2>/dev/null | sed 's/^#* *//')
+    printf '  %s  %s\n' "$f" "$h"
+    found=$((found + 1))
+  done
+  echo "EXAMINED: $n messages. $found marked fyi -- kept out of the queue, never discarded."
+  exit 0
+fi
+
 [ -d "$CHANNEL" ] || exit 0
 cd "$CHANNEL"
 # `2*.md` and not `*.md`: the channel carries its own README and message template, and a
@@ -324,10 +340,16 @@ for s in $(grep -lE '^state: +settled$' 2*.md 2>/dev/null || true); do
   done
 done
 
+# `fyi: true` says out loud that nothing here needs the person, so it does not sit in
+# their queue. It is not discarded: `--fyi` lists exactly these, which is the condition
+# for dropping anything out of a queue -- a log with no way to read it is not a control.
+# Measured before the guard existed: 13 items waiting on the person, none of them
+# carrying an executable block, and the headings were minutes rather than requests.
 waiting=""
 for f in $(grep -lE "^to: +($ME|both)\$" 2*.md 2>/dev/null || true); do
   if grep -qE '^state: +settled$' "$f"; then continue; fi
   if printf '%s' "$closed" | grep -qx "$f"; then continue; fi
+  if [ "$ME" = owner ] && grep -qE '^fyi: +true$' "$f"; then continue; fi
   waiting="$waiting$f"$'\n'
 done
 

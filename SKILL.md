@@ -2,7 +2,7 @@
 name: gtd-with-agents
 description: Set up and run the three-party working method for a project driven by Claude Code and Claude Cowork together — a file-based channel the two agents use to talk to each other, an explicit delegation contract that records what the person decides and what they hand over, and the verification culture that makes agreement between two agents worth anything. Use this whenever someone is starting a project with both Claude Code and Cowork, asks how the two should coordinate, says they are tired of copying questions from one session and pasting answers into the other, asks "who decides what here", "how do I stay informed without approving everything", "how much can I delegate", or wants to install a working agreement, an exchange channel, or an approval policy between agents. Also use when a session arrives cold at a project that already has this method installed and needs to pick it up.
 metadata:
-  version: 0.4.3
+  version: 0.5.0
 ---
 
 # Get Things Done with Claude
@@ -293,24 +293,18 @@ A paste-prompt is prose citing identifiers, and prose citing identifiers decays.
 
 #### And check the implementing agent can reach this skill at all
 
-**The two agents read skills from different stores.** Being installed here says nothing about
-being installed there, and the difference is invisible from this side — which is exactly the
-state/events frontier applied to the method's own installation.
+**The two agents read skills from different stores**, and being installed here says nothing about
+being installed there. That difference is invisible from this side — the state/events frontier,
+applied to the method's own installation.
 
-So during setup, **ask the person to confirm it is installed on the implementing side too**, and
-tell them where it goes. For Claude Code that is a skills directory on the filesystem:
+**You cannot run that install yourself**, and finding out costs two failed attempts: the reviewing
+agent's sandbox refuses any write landing in `.claude/skills/<name>/`. The guard is reasonable — an
+agent installing its own skill is adjacent to one editing its own permissions. Prepare the block
+and hand it over, and write the log before attempting, so a refused attempt looks refused rather
+than absent.
 
-**You cannot run this install yourself, and finding that out costs two failed attempts.** The
-reviewing agent's sandbox refuses any write whose destination is `.claude/skills/<name>/` — writing
-to a sibling directory works, reading the source works, copying to `/tmp` works, and only that
-destination fails. The guard is reasonable: an agent installing its own skill is adjacent to an
-agent editing its own permissions. **So prepare the block and hand it over**, exactly as you do
-with the permission configuration. Write the log before attempting, so a refused attempt looks
-refused rather than absent.
-
-**And in a Cowork session there is no `.skill` file to unzip.** The skill exists as a **directory**
-in the plugin cache, under a temporary path that gets regenerated, so the path has to be located
-rather than remembered:
+**In a Cowork session there is no `.skill` file to unzip.** The skill is a directory in a plugin
+cache, under a temporary path that gets regenerated, so it is located rather than remembered:
 
 ```sh
 SRC=$(find "${TMPDIR:-/tmp}" /var/folders -type d -name gtd-with-agents 2>/dev/null | head -1)
@@ -318,93 +312,41 @@ test -n "$SRC" || { echo "FAILED: no skill directory found under TMPDIR or /var/
 mkdir -p .claude/skills && cp -R "$SRC" .claude/skills/
 ```
 
-The cache lives under the system temporary directory, which is `/var/folders` on macOS and
-`$TMPDIR` elsewhere, so both get searched. **The guard is the point**: with no match, `SRC` is
-empty and `cp -R "" .claude/skills/` copies nothing while reporting an error about an argument
-rather than about the skill. Naming the failure costs one line.
-
-Where a release bundle *is* available, unzip works instead. **Give them one of these, not several.**
-
-All their projects:
+Where a release bundle *is* available, unzip instead — **one of these, not both:**
 
 ```sh
 mkdir -p ~/.claude/skills
 unzip -q gtd-with-agents.skill -d ~/.claude/skills
 ```
 
-Or this project only, shared with whoever has the repository:
-
 ```sh
 mkdir -p .claude/skills
 unzip -q gtd-with-agents.skill -d .claude/skills
 ```
 
-**Verify the copy by hash, not by count.** Thirteen files present says nothing about thirteen files
-intact.
+The bundle carries its own folder, so it lands at `<dir>/gtd-with-agents/SKILL.md`. **Verify by
+hash, not by count**: thirteen files present says nothing about thirteen files intact.
 
-The bundle carries its own folder, so it unzips **into** the skills directory and lands at
-`<dir>/gtd-with-agents/SKILL.md`. Then `/gtd-with-agents` works in a new session there.
+Why the second install is worth it: the bootstrap prompt tells that agent what to do **once**, and
+the skill is what lets it re-read the protocol in month three. **If they decline, that is a
+workable configuration and not a broken one** — the two copied channel files exist for it.
 
-Say plainly why it is worth the second install: the bootstrap prompt tells that agent what to do
-**once**, and the skill is what lets it re-read the protocol in month three when a question comes
-up. Without it, `reference/protocol.md` is a path that agent cannot open, and the only copy of the
-format it can reach is the one in the channel.
+**Then fill the "Where the method itself is installed" table**, one row per agent, dated. Each side
+measures its own:
 
-**If they decline or cannot**, that is a workable configuration and not a broken one — the two
-copied channel files exist for exactly this case.
+```sh
+channel-status.sh --whoami
+```
 
-**Either way, fill the "Where the method itself is installed" table in the configuration**, one
-row per agent, dated. Then say out loud what that table is and is not:
-
-> Neither agent can see the other's session, so **it is a self-report with a date, not a
-> verification** — the same distinction `head: sha:` makes against `head: clock:`. Every session
-> compares its own row before doing anything else; agreeing is silent, and **disagreeing produces a
-> channel message with `state: open` and `to: owner`, not an edit to the configuration.** Two agents correcting their own rows would
-> give that file two writers, which is the shape `protocol.md` rejects for a shared status file —
-> so the state is derived here too: the table is what was set up, a later message is the fresher
-> fact, and the person folds it back in.
-
-Both bootstrap prompts carry that comparison already. The reviewing side also reads the *other*
-row, because an agent that cannot open `reference/protocol.md` has to be cited channel files
-rather than reference paths — and a divergence from the protocol by an agent that cannot read the
-protocol is a missing document, not carelessness.
+It reports only the side it runs on and says so in its first line. That is a self-report with a
+date, not a verification — the same distinction `head: sha:` makes against `head: clock:` — and
+`config-template.md` carries why it is the only honest instrument, and what to do when a row
+disagrees.
 
 **And capture the install itself.** An install is a verdict handed down from outside the project:
 it happens elsewhere, comes back as a yes or a no, and leaves nothing behind unless somebody
-catches it. **Write the log before attempting, with the outcome blank**, so an attempt nobody
-finished looks unfinished rather than absent — the same shape the floor verification log has, and
-for the same reason:
-
-```sh
-mkdir -p .runs
-LOG=".runs/$(date -u +%Y%m%d-%H%M%S)-install.log"
-{
-  echo "=== install · $(date -u '+%F %T')Z ==="
-  echo "artefact: <what was installed, and which version>"
-  echo "target:   <where>"
-  echo "outcome:"
-} > "$LOG"
-echo "LOG: $LOG"
-```
-
-Then the person pastes what the installer said, **verbatim**, onto the `outcome:` line, and the
-path goes in the configuration. `never claim it installs without a path`, the same rule the floor
-already lives under.
-
-This rule was written after two bundles were refused, and **the repository that wrote it broke it
-within the hour** — the next install left no log, and the installer's exact words survive only in
-a code comment. That is the third reason in `verification.md` §12 happening to the file that
-publishes it, which is why the block above exists rather than a paragraph asking nicely.
-
-Tell them plainly what the method does *not* do, in your own words:
-
-> No file wakes anyone up. Cowork cannot answer a permission prompt in Claude Code — those are
-> modal and live inside its interface. What disappears is the copying and the transcription risk,
-> not the turn-taking.
-
-A method that promises more than that is lying, and the person will find out at the worst moment.
-
----
+catches it. Never claim it installed without a path — attempt it, paste back what the installer
+said verbatim, and put the file next to the configuration.
 
 ## Running the method
 

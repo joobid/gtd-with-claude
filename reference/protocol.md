@@ -159,38 +159,33 @@ not read cannot audit it — and the method promises to keep them informed.
 ends in agreement, with the work never carried out and no closing note written, stays pending —
 and that is correct, not a leak.
 
-The writer enforces the three rules that follow, so none of them is something to remember:
+The writer refuses the three shapes below, so none of them is anything to remember. What it cannot
+tell you is why each one is there:
 
-| Written | Refused unless | Because |
-|---|---|---|
-| `--state consensus` | `--re` names the other agent's message | One agent alone asserting a two-party fact |
-| `--state consensus` | `--lands-in <path>` | An approved sprint plan lived a day in a channel outside version control |
-| `--state settled` | `--closes "<text quoted from that message>"` | A `settled` that also asks or instructs buries it where no derivation looks |
+| Refused | Because |
+|---|---|
+| `consensus` without `--re` at the other agent | One agent alone asserting a two-party fact |
+| `consensus` without `--lands-in` | An approved sprint plan lived a day in a channel outside version control |
+| `settled` without `--closes` | A `settled` that also asks or instructs buries it where no derivation looks |
 
-**`--closes` demands a selection, never a classification, and that is the general principle.** A
-guard that asks you to *pick* fails loudly when you have not looked. A guard that tries to *detect*
-fails silently whenever the text does not resemble its pattern: a proposed detector for "this
-settled also asks something" — refuse if a line ends in `?` — fired on **0 of 29** real messages,
-including both true positives, because the buried question was written as prose.
+**`--closes` demands a selection, never a classification, and that generalises.** A guard that asks
+you to *pick* fails loudly when you have not looked. One that tries to *detect* fails silently
+whenever the text does not resemble its pattern: a proposed detector for "this settled also asks
+something" — refuse if a line ends in `?` — fired on **0 of 29** real messages, including both true
+positives, because the buried question was prose.
 
 It also closes M19. Twenty-three decisions by the person were written `settled` with `re: -`, and
-the derivation excludes `settled`, so all twenty-three were invisible to the other agent — one
-answer arrived nine minutes before an agent asked the same thing again. **A decision that opens
-work is not closed.** It is `open`, addressed to whoever has to act.
+the derivation excludes `settled`, so all twenty-three were invisible — one answer arrived nine
+minutes before an agent asked the same thing again. **A decision that opens work is not closed.**
 
 **The residual noise is accepted on purpose.** In a check whose failure mode is silence, coverage
-beats precision: a false positive costs one line and is cleared by writing the missing `settled`,
-which is the behaviour the method wants. The false negative it replaces hid a broken privacy
-control.
+beats precision: a false positive costs one line and is cleared by writing the missing `settled`.
+The false negative it replaces hid a broken privacy control.
 
 **And the tempting simplification is wrong, which was measured.** Closing a whole *thread* once
 anything in it settles is cleaner and produced zero false positives on the same channel — and lost
 one of the two messages the fix exists to surface, because a `settled` there had closed a different
 item earlier. A thread is a rolling conversation, not one topic.
-
-The concrete failure it closes: the person sets something to CONSENSUS, one agent writes "agreed,
-proceeding", acts, and the other never read it. The record says consensus, and the record is what
-gets audited.
 
 ### Why `settled` exists and is not `consensus`
 
@@ -267,37 +262,25 @@ part that was costing something.
 
 ---
 
-### What gets written down before it reaches the person, and the criterion is not what it was
+### What gets written down before it reaches the person
 
-A question and a modal prompt are covered above. What follows was written for **blocks of
-commands**, on the grounds that a block *"is the only one of the three that acts on the world"*.
-
-**That criterion is wrong, and a real session showed why.** An implementing agent put five drafted
-options to the person — *"did a modal appear?"* — each carrying its own reading of a permission
-probe. All five rested on a premise the reviewing agent could have falsified in one message, and it
-never saw the question, because only command blocks are pre-written. The correction arrived because
-**the person copied the question across by hand**: the transcription this method exists to remove,
-happening inside the method.
-
-So what goes to the channel first is not what **acts**. It is **what carries an interpretation the
-person will adopt as their own**:
+The criterion is not what **acts**. It is **what carries an interpretation the person will adopt as
+their own**:
 
 | | Written first | Why |
 |---|---|---|
-| A question with drafted options | **Always** | Pure interpretation, and the option they pick becomes a decision both agents then treat as not reopenable |
+| A question with drafted options | **Always** | Pure interpretation, and the option they pick becomes a decision both agents treat as not reopenable |
 | A red or amber block | **Yes** | It acts, on a premise nobody was able to review |
 | A green block — read, search, check | No | Neither acts nor interprets, and the rule would cost more than it protects |
 | A permission modal | Cannot | It blocks. Recorded immediately afterwards |
 
-A block executes; a set of drafted options is nothing *but* interpretation. Of the two, the second
-is the one nobody was checking.
+The first row was the correction. The rule used to cover command blocks only, on the grounds that a
+block is the one thing that acts on the world — and then an agent put five drafted options to the
+person, all five resting on a premise the reviewing agent could have falsified in one message, and
+it never saw the question. The fix arrived because **the person carried it across by hand**: the
+transcription this method exists to remove, happening inside the method.
 
-**The block and the reason for it are written to the channel before it is offered**, `to: owner`.
-The modal that follows is then a confirmation of something already written and reviewable rather
-than the first anyone hears of it — and the reviewing agent can object while the person is still
-reading.
-
-**And the block proves that message exists.** First lines, above the work:
+**And the block proves that message exists**, in its first lines:
 
 ```sh
 PROP="<channel>/<the message that proposes this>"
@@ -306,132 +289,25 @@ test "$(wc -l < "$PROP")" -ge 8 || { echo "FAILED: $PROP has no body to review";
 echo "proposed in $PROP"
 ```
 
-This is not ceremony. On the first day this method ran end to end, an agent handed the person a
-red block — `rm` inside the version-control directory — **citing a channel message it had never
-written**, and the person ran it. Naming an artefact is not evidence that it exists, and when the
-artefact is a file, checking costs one line.
+On the first day this method ran, an agent handed over a red block — `rm` inside the version-control
+directory — **citing a channel message it had never written**, and the person ran it. Naming an
+artefact is not evidence that it exists.
 
-**What it establishes, and what it does not.** It establishes that a file exists with a body long
-enough to be a message rather than a stub — front matter alone is seven lines, so eight is the
-cheapest thing that is not empty. It does **not** establish that the body is any good, or that it
-describes this block. A determined agent can satisfy it with eight lines of nothing. It closes
-the failure that happened rather than every failure imaginable, and saying which is which is the
-point of writing it down.
+**What it establishes and what it does not.** That a file exists with a body longer than front
+matter. Not that the body is any good, or that it describes this block: eight lines of nothing
+satisfies it. It closes the failure that happened, not every failure imaginable — and it costs
+three lines of protocol in front of every block the person sees.
 
-**And it costs something**, which is worth saying in the same breath: every block the person sees
-now opens with three lines of protocol before the work. That is the trade — a little noise in
-front of every block, against a red one running on a premise nobody could check.
+## The channel does not wake anyone up, and the person is not the one who remembers
 
-It changes the failure mode twice over: the agent has to produce the file before it can cite it,
-and the person sees `FAILED` **before** anything executes rather than trusting a filename they
-were told about.
+No file triggers anything: each agent reads when its turn comes round. What the channel removes is
+copying and the risk of transcription — not the waiting.
 
-A skipped rule is visible — the directory is empty where the message should be. **A false claim
-of compliance is not**, and that is why this is a line of shell rather than a paragraph asking
-nicely. A protocol enforced only by agreement fails the way this one failed: **by reporting
-success.** That is `verification.md` §5 — *confirm the mechanism, not the document* — applied to
-this method's own governance, which is the one place it had never been pointed.
-
-The sweep, for anyone auditing afterwards:
-
-```sh
-for l in <runs>/*.log; do grep -q '^proposed in ' "$l" || echo "NO PROVENANCE: $l"; done
-```
-
-Logs written before this rule existed carry no such line and are **declared out of its scope**,
-not silently skipped.
-
----
-
-## What the channel is not
-
-**It is not a record.** It holds the deliberation, not the decision.
-
-Every consensus that changes a plan, a guide, an interface or a scope has to land in a **permanent
-project file in the same milestone**, or it did not happen. Where the channel lives in an ignored
-directory, this is not a preference — the channel does not survive a fresh copy of the project.
-
-This is the state/events split applied to the two agents: the exchange is the event, the project
-file is the state.
-
-**It does not wake anyone up.** No file triggers anything. Each agent reads the channel when its
-turn comes round. What the channel removes is copying and the risk of transcription — not the
-waiting.
-
-### But the person does not have to be the one who remembers
-
-That sentence is true about **notifications** and was being read as true about **attention**, and
-those are different things. Between *no push* and *the person has to mention it* there is a step,
-and skipping it puts the cable back: a message written mid-milestone waits for somebody to bring
-it up.
-
-`assets/channel-status.sh` is that step: addressed to me, not itself `settled`, and with no
-`settled` anywhere down its reply chain. One short block, or nothing. **Read only.**
-
-**It is deliberately broader than the `open` question query below.** That query answers *what is
-being asked*, which is a different thing from *what is outstanding*, and reading it as if it were
-the second is what made agreed-and-unexecuted work invisible for a whole working day. A message
-carrying `state: consensus` is agreed and not done, and the notice shows it until a `settled`
-names it.
-
-### It is two pieces, and one of them alone does nothing
-
-**The script, and the registration that makes the tool run it.** An executable asset with no
-registration is a file that never executes — which is the same shape as a permission rule the tool
-accepts and never evaluates, and it got into the first draft of *this very section*, written to fix
-that shape.
-
-In Claude Code the registration is a `UserPromptSubmit` hook. It takes no matchers, fires on every
-prompt, and injects text through `hookSpecificOutput.additionalContext`:
-
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": [
-      { "hooks": [
-          { "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/channel-status.sh",
-            "timeout": 10 } ] }
-    ]
-  }
-}
-```
-
-The script it points at is `channel-status.sh` with this project's arguments:
-
-```sh
-channel-status.sh --channel <channel> --me code --json
-```
-
-**`timeout` is written explicitly and 10 is not arbitrary.** The default is 30 seconds, and **a
-hook that times out discards its output in silence** — it does not warn, it does not fail, the
-turn simply proceeds without the notice. A grep over a dozen files is milliseconds, so ten seconds
-is generous by three orders of magnitude and still bounded. Worth revisiting if the channel is
-never archived, which is one more reason the archive policy exists.
-
-### How you know it works, and it is not that the file is there
-
-**The check is that the hook fires, not that the script exists.** Type any prompt at all and look
-for the injected block. Two pieces means two ways to have done half the job, and both leave the
-script sitting on disk looking installed.
-
-**And probe it against a channel that has something in it.** Over an empty one it prints nothing
-and looks correct, which is the blind check this whole method exists to catch — it would be
-embarrassing to install that inside this skill. When it was first installed it named the two
-genuinely unanswered messages, and that is what made it a measurement rather than an installation.
-
-**And say what it still does not do**, because a mechanism oversold is worse than none:
-
-- It fires **when the person types**. A message written while the agent is mid-milestone surfaces
-  at its next turn, not immediately. The gain is from *"the person must remember"* to *"the session
-  is told"*, which is real and is not a notification.
-- It covers **one side**. Whichever agent runs in a tool without a per-turn hook has no equivalent,
-  and that asymmetry belongs in the configuration next to the rest.
-- It **blocks the prompt until it returns**, and a hook that times out discards its output
-  **silently**. A grep over a dozen files is milliseconds. It is worth revisiting if the channel is
-  never archived, which is the same reason the archive policy exists.
-
----
+**That is true about notifications and was being read as true about attention.** Between *no push*
+and *the person has to mention it* there is a step, and skipping it puts the cable back: a message
+written mid-milestone waits for somebody to bring it up. `channel-status.sh` is that step, wired to
+whatever the tool fires every turn. Installing it is Step 4b of `SKILL.md`, which is also where the
+reason it is **two** pieces lives — an executable with no registration is a file that never runs.
 
 ## Every wait names the artefact that ends it
 

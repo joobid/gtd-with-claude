@@ -28,7 +28,7 @@
 set -euo pipefail
 
 AUTHOR=""; FROM=""; TO=""; RE="-"; STATE="open"; SLUG=""; SELFTEST=""
-CLOSES=""; LANDS_IN=""; DECISIONS=""
+CLOSES=""; LANDS_IN=""; DECISIONS=""; DECIDE=""; BLOCKS=""; FYI=""
 CHANNEL="${GTD_CHANNEL:-.runs/exchange}"
 
 while [ $# -gt 0 ]; do
@@ -41,6 +41,9 @@ while [ $# -gt 0 ]; do
     --slug)    SLUG="$2";    shift 2 ;;
     --closes)  CLOSES="$2";  shift 2 ;;
     --lands-in) LANDS_IN="$2"; shift 2 ;;
+    --decide)  DECIDE="$2";  shift 2 ;;
+    --blocks)  BLOCKS="$2";  shift 2 ;;
+    --fyi)     FYI=1;        shift ;;
     --channel) CHANNEL="$2"; shift 2 ;;
     --decisions) DECISIONS=1; shift ;;
     --selftest) SELFTEST=1; shift ;;
@@ -191,7 +194,7 @@ EOF
       report fail "$LABEL" "report this: refused, and a file appeared anyway"
     elif printf '%s' "$err" | grep -q "unknown argument"; then
       report fail "$LABEL" "this build does not know the flag -- it refused for the wrong reason"
-    elif [ -n "${SAYING:-}" ] && ! printf '%s' "$err" | grep -q "$SAYING"; then
+    elif [ -n "${SAYING:-}" ] && ! printf '%s' "$err" | grep -q -- "$SAYING"; then
       report fail "$LABEL" "refused, but not for this reason: $err"
     else
       report ok "$LABEL"
@@ -206,7 +209,7 @@ EOF
   }
 
   LABEL="refuses state settled without --closes (A-06, M19)"; SAYING="requires --closes"
-  refuses --author code --from owner --to both --state settled --slug d1
+  refuses --author code --from owner --to both --state settled --slug d1 --fyi
 
   target=$(bash "$0" --channel "$probe" --author cowork --from cowork --to code \
                      --state open --slug question <<'EOF'
@@ -234,7 +237,7 @@ EOF
   # probe channel, so there is something to find; on an empty one this asserts nothing.
   LABEL="--decisions lists what the person has decided"
   bash "$0" --channel "$probe" --author cowork --from owner --to both --state open \
-            --slug a-decision <<'EOF' >/dev/null 2>&1
+            --slug a-decision --fyi <<'EOF' >/dev/null 2>&1
 ## ASKED / ANSWERED
 they decided
 EOF
@@ -255,7 +258,7 @@ EOF
   LABEL="writing to the person puts those decisions in front first (A-09)"
   checks=$((checks + 1))
   bash "$0" --channel "$probe" --author code --from code --to owner --state open \
-            --slug gap >/dev/null 2>"$probe/.a09.err" <<'EOF'
+            --slug gap --fyi >/dev/null 2>"$probe/.a09.err" <<'EOF'
 ## a gap
 EOF
   if grep -q 'already decided' "$probe/.a09.err" 2>/dev/null; then
@@ -304,6 +307,21 @@ EOF
     printf '  FAIL  %s\n' "$LABEL"; fails=$((fails + 1))
   fi
   rm -rf "$bigdir"
+
+  # --- B-09: what reaches the person says which of two things it is -------
+  LABEL="refuses a message to the person with neither --decide nor --fyi"; SAYING="--decide"
+  refuses --author cowork --from cowork --to owner --slug b9a
+
+  LABEL="refuses --decide with nothing named as blocked"; SAYING="requires --blocks"
+  refuses --author cowork --from cowork --to owner --slug b9b --decide "A or B"
+
+  LABEL="and it covers to: both, which was 10 of the 13 measured"; SAYING="--decide"
+  refuses --author cowork --from cowork --to both --slug b9c
+
+  LABEL="accepts --fyi, which stays out of their queue"
+  accepts --author cowork --from cowork --to owner --slug b9d --fyi <<'EOF'
+## nothing here needs you
+EOF
 
   printf 'EXAMINED: %d checks, exercising the shipped writer against %s\n' "$checks" "$probe"
   # Said rather than implied. The tty guard is real and one line long, and the obvious
@@ -392,6 +410,38 @@ if [ "$STATE" = "consensus" ] && [ -z "$LANDS_IN" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Anything reaching the person says which of two things it is.
+#
+# `to: owner` meant both *decide this* and *for your information*, and nothing told them
+# apart, so both counted the same as pending. Measured on a real channel: 13 items waiting
+# on the person, **0 of them carrying an executable block**, with headings like "What this
+# settles" and "I recorded X as decided". Minutes, not requests.
+#
+# `--decide` also requires `--blocks`: if you cannot name what stops until they answer, it
+# is not a decision, it is information. That is a selection guard like `--closes` -- it
+# never classifies, it makes you pick.
+#
+# It covers `both` as well as `owner`, and that is not tidiness: of those 13, **10 were
+# `to: both` and 3 were `to: owner`**, so a guard on `owner` alone would have reached
+# under a quarter of the queue it exists for.
+# ---------------------------------------------------------------------------
+if [ "$TO" = "owner" ] || [ "$TO" = "both" ]; then
+  if [ -n "$DECIDE" ] && [ -n "$FYI" ]; then
+    echo "gtd-msg: --decide and --fyi are the two cases. Not both." >&2; exit 2
+  fi
+  if [ -z "$DECIDE" ] && [ -z "$FYI" ]; then
+    echo "gtd-msg: a message reaching the person needs --decide '<the choice>' or --fyi." >&2
+    echo "  --fyi says plainly that nothing here needs them, and stays out of their queue." >&2
+    exit 2
+  fi
+  if [ -n "$DECIDE" ] && [ -z "$BLOCKS" ]; then
+    echo "gtd-msg: --decide requires --blocks '<what stops until they answer>'." >&2
+    echo "  If nothing stops, it is not a decision -- it is information. Use --fyi." >&2
+    exit 2
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # The body is read in full BEFORE anything is created on disk.
 #
 # It used to stream: `{ echo header...; cat; } > "$MSG"` opened the file and wrote the
@@ -474,6 +524,9 @@ MSG="$CHANNEL/$TS-$AUTHOR-$SLUG.md"
   echo "state: $STATE"
   if [ -n "$CLOSES" ]; then echo "closes: $CLOSES"; fi
   if [ -n "$LANDS_IN" ]; then echo "lands-in: $LANDS_IN"; fi
+  if [ -n "$DECIDE" ]; then echo "decide: $DECIDE"; fi
+  if [ -n "$BLOCKS" ]; then echo "blocks: $BLOCKS"; fi
+  if [ -n "$FYI" ]; then echo "fyi: true"; fi
   echo "head: $HEAD"
   echo "---"
   echo
