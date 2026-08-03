@@ -53,12 +53,13 @@ while [ $# -gt 0 ]; do
     --selftest) SELFTEST=1;  shift ;;
     --count)   MODE=count;   shift ;;
     --whoami)  MODE=whoami;  shift ;;
-    --audit)   MODE=audit; RUNS="${2:-}"; if [ -n "${2:-}" ]; then shift 2; else shift; fi ;;
+    --audit)   MODE=audit; RUNS="${2:-}"; if [ -n "${2:-}" ] && [ "${2#-}" = "$2" ]; then shift 2; else RUNS=""; shift; fi ;;
+    --accept)  ACCEPT=1;   shift ;;
     -h|--help) sed -n '3,38p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "channel-status: unknown argument: $1" >&2; exit 2 ;;
   esac
 done
-MODE="${MODE:-notice}"; RUNS="${RUNS:-}"
+MODE="${MODE:-notice}"; RUNS="${RUNS:-}"; ACCEPT="${ACCEPT:-0}"
 
 # A-02 at level 1. `grep -l '^state: open' *.md` returned 33 where there were 32, three
 # times in eighteen hours across three sessions: the channel keeps its own README, and
@@ -136,22 +137,58 @@ if [ "$MODE" = audit ]; then
   # is nothing to find: exit 1 propagates, the assignment fails, and the report stops
   # mid-section looking finished. The empty result is the common path, so the scanner
   # died silently exactly when it had good news -- found by running it, not by reading it.
-  mhits=$(grep -rlE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' "$RUNS" 2>/dev/null || true)
-  ihits=$(grep -rhoE '\b[0-9]{8}[A-HJ-NP-TV-Z]\b' "$RUNS" 2>/dev/null | sort -u || true)
-  mail=$(printf '%s' "$mhits" | grep -c . || true)
-  idn=$(printf '%s' "$ihits" | grep -c . || true)
-  echo "  files scanned:            $files"
-  echo "  files containing an email:  $mail"
-  echo "  distinct national-ID shapes: $idn"
-  echo "EXAMINED: two patterns over $files files under $RUNS."
+  #
+  # RFC 2606 is matched on the domain SUFFIX. Anchoring it to the exact domain flagged
+  # `dev@mail.example.org` and `alguien@servidor.invalid` on a real directory: two false
+  # positives in a scanner whose whole value is that a hit means something.
+  mhits=$(grep -rhoE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' "$RUNS" 2>/dev/null \
+          | grep -vEi '@([a-z0-9.-]*\.)?(example\.(com|net|org)|test|invalid|localhost)$' \
+          | sort -u || true)
+  # The check letter, not the shape. A value that cannot belong to anybody is not a
+  # finding, and this is the same boundary RFC 2606 draws for addresses: not a list of
+  # things we trust, a set that by construction is nobody's.
+  ihits=$(grep -rhoE '\b[0-9]{8}[A-HJ-NP-TV-Z]\b' "$RUNS" 2>/dev/null | sort -u \
+          | awk 'BEGIN{t="TRWAGMYFPDXBNJZSQVHLCKE"}
+                 {n=substr($0,1,8)+0; if (substr(t, n%23+1, 1) == substr($0,9,1)) print}' || true)
+
+  # Values already reviewed are recorded as HASHES, never as values. That is the whole
+  # design: an exception list holding the real strings would be the one place in the tree
+  # nothing scans -- which is exactly where a real identifier hid the last time somebody
+  # remediated one. A hash cannot leak what it exempts, and a new value has a new hash.
+  SEEN="$RUNS/.a20-reviewed"
+  if command -v sha256sum >/dev/null 2>&1; then H() { sha256sum | cut -c1-16; }
+  else H() { shasum -a 256 | cut -c1-16; }; fi
+  new=""; known=0
+  for v in $mhits $ihits; do
+    h=$(printf '%s' "$v" | H)
+    if [ -f "$SEEN" ] && grep -q "^$h" "$SEEN" 2>/dev/null; then
+      known=$((known + 1))
+    else
+      new="$new$h  $v"$'\n'
+    fi
+  done
+  nnew=$(printf '%s' "$new" | grep -c . || true)
+
+  echo "  files scanned:        $files"
+  echo "  distinct values:      $((known + nnew))   reviewed: $known   NEW: $nnew"
+  echo "EXAMINED: two patterns over $files files under $RUNS, minus RFC 2606 domains and"
+  echo "  identifiers whose check letter is invalid."
   echo "NOT EXAMINED: names, addresses, phone numbers, bank details, and any identifier"
   echo "  whose shape this does not know. A clean result here is not a clean directory."
-  if [ "$mail" -gt 0 ] || [ "$idn" -gt 0 ]; then
+  if [ "$nnew" -gt 0 ]; then
     echo
-    echo "  This directory is normally outside version control, so the project's own barrier"
-    echo "  has never looked at it. Outside git is not outside disk: talking about a value"
-    echo "  copies it here, and removing it from the tree does not remove it from here."
+    printf '%s' "$new" | sed 's|^|  NEW  |'
+    echo
+    echo "  Outside version control is not outside disk: talking about a value copies it"
+    echo "  here, and removing it from the tree does not remove it from here."
+    echo "  Redact what is real, then record the rest as reviewed:"
+    echo "      channel-status.sh --audit $RUNS --accept"
     fails=$((fails + 1))
+  fi
+  if [ "$ACCEPT" = 1 ]; then
+    printf '%s' "$new" | cut -d' ' -f1 | grep . >> "$SEEN" 2>/dev/null || true
+    echo "  recorded $nnew hashes in $SEEN. The values themselves are not written anywhere."
+    fails=0
   fi
   echo
   [ "$fails" -eq 0 ] && { echo "AUDIT CLEAN on what it examined."; exit 0; }
@@ -236,11 +273,16 @@ if [ -n "$SELFTEST" ]; then
   assert "--audit names a lands-in path that is not there (A-07)" \
          "$(bash "$0" --channel "$probe" --audit "$probe" 2>&1 || true)" "MISSING *docs/nowhere.md"
 
-  # A-20. A scanner is trusted only after it has been seen to fire, so the fixture
-  # carries one address of the shape it looks for.
-  printf 'contact: someone@example.org\n' > "$probe/run.log"
-  assert "--audit finds an address left in the run directory (A-20)" \
-         "$(bash "$0" --channel "$probe" --audit "$probe" 2>&1 || true)" "containing an email: *1"
+  # A-20. A scanner is trusted only after it has been seen to fire, and the fixture has
+  # to carry a value the scanner should ACTUALLY flag. It used to use `example.org`, which
+  # RFC 2606 reserves -- so the moment the suffix exemption was fixed, this assertion went
+  # red for the right reason: the fixture was asserting on a value that is nobody's.
+  printf 'contact: alguien@dominio-real.es\n' > "$probe/run.log"
+  out20=$(bash "$0" --channel "$probe" --audit "$probe" 2>&1 || true)
+  assert "--audit flags an address that is not RFC 2606 (A-20)" "$out20" "NEW.*dominio-real"
+  assert "--audit exempts RFC 2606 by suffix, not exact domain (A-20)" \
+         "$(printf 'x: dev@mail.example.org\n' > "$probe/run2.log"; \
+            bash "$0" --channel "$probe" --audit "$probe" 2>&1 || true)" "NEW: *1"
 
   # And the failure mode that matters more than any hit: nothing to look at must not
   # read as nothing to find.
