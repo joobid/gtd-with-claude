@@ -246,11 +246,30 @@ the part that was actually costing something.
 
 ---
 
-### A command block is written down before it runs, and the block proves it
+### What gets written down before it reaches the person, and the criterion is not what it was
 
-A question and a modal prompt are covered above. The third thing an agent hands a person is a
-**block of commands**, and it is the only one of the three that acts on the world. It was the one
-without a rule.
+A question and a modal prompt are covered above. What follows was written for **blocks of
+commands**, on the grounds that a block *"is the only one of the three that acts on the world"*.
+
+**That criterion is wrong, and a real session showed why.** An implementing agent put five drafted
+options to the person — *"did a modal appear?"* — each carrying its own reading of a permission
+probe. All five rested on a premise the reviewing agent could have falsified in one message, and it
+never saw the question, because only command blocks are pre-written. The correction arrived because
+**the person copied the question across by hand**: the transcription this method exists to remove,
+happening inside the method.
+
+So what goes to the channel first is not what **acts**. It is **what carries an interpretation the
+person will adopt as their own**:
+
+| | Written first | Why |
+|---|---|---|
+| A question with drafted options | **Always** | Pure interpretation, and the option they pick becomes a decision both agents then treat as not reopenable |
+| A red or amber block | **Yes** | It acts, on a premise nobody was able to review |
+| A green block — read, search, check | No | Neither acts nor interprets, and the rule would cost more than it protects |
+| A permission modal | Cannot | It blocks. Recorded immediately afterwards |
+
+A block executes; a set of drafted options is nothing *but* interpretation. Of the two, the second
+is the one nobody was checking.
 
 **The block and the reason for it are written to the channel before it is offered**, `to: owner`.
 The modal that follows is then a confirmation of something already written and reviewable rather
@@ -318,6 +337,74 @@ file is the state.
 turn comes round. What the channel removes is copying and the risk of transcription — not the
 waiting.
 
+### But the person does not have to be the one who remembers
+
+That sentence is true about **notifications** and was being read as true about **attention**, and
+those are different things. Between *no push* and *the person has to mention it* there is a step,
+and skipping it puts the cable back: a message written mid-milestone waits for somebody to bring
+it up.
+
+`assets/channel-status.sh` is that step. It derives exactly what the documented queries derive —
+addressed to me, still `open` or `escalated`, minus anything a later `re:` closes — and prints one
+short block, or nothing. **Read only.**
+
+### It is two pieces, and one of them alone does nothing
+
+**The script, and the registration that makes the tool run it.** An executable asset with no
+registration is a file that never executes — which is the same shape as a permission rule the tool
+accepts and never evaluates, and it got into the first draft of *this very section*, written to fix
+that shape.
+
+In Claude Code the registration is a `UserPromptSubmit` hook. It takes no matchers, fires on every
+prompt, and injects text through `hookSpecificOutput.additionalContext`:
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      { "hooks": [
+          { "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/channel-status.sh",
+            "timeout": 10 } ] }
+    ]
+  }
+}
+```
+
+The script it points at is `channel-status.sh` with this project's arguments:
+
+```sh
+channel-status.sh --channel <channel> --me code --json
+```
+
+**`timeout` is written explicitly and 10 is not arbitrary.** The default is 30 seconds, and **a
+hook that times out discards its output in silence** — it does not warn, it does not fail, the
+turn simply proceeds without the notice. A grep over a dozen files is milliseconds, so ten seconds
+is generous by three orders of magnitude and still bounded. Worth revisiting if the channel is
+never archived, which is one more reason the archive policy exists.
+
+### How you know it works, and it is not that the file is there
+
+**The check is that the hook fires, not that the script exists.** Type any prompt at all and look
+for the injected block. Two pieces means two ways to have done half the job, and both leave the
+script sitting on disk looking installed.
+
+**And probe it against a channel that has something in it.** Over an empty one it prints nothing
+and looks correct, which is the blind check this whole method exists to catch — it would be
+embarrassing to install that inside this skill. When it was first installed it named the two
+genuinely unanswered messages, and that is what made it a measurement rather than an installation.
+
+**And say what it still does not do**, because a mechanism oversold is worse than none:
+
+- It fires **when the person types**. A message written while the agent is mid-milestone surfaces
+  at its next turn, not immediately. The gain is from *"the person must remember"* to *"the session
+  is told"*, which is real and is not a notification.
+- It covers **one side**. Whichever agent runs in a tool without a per-turn hook has no equivalent,
+  and that asymmetry belongs in the configuration next to the rest.
+- It **blocks the prompt until it returns**, and a hook that times out discards its output
+  **silently**. A grep over a dozen files is milliseconds. It is worth revisiting if the channel is
+  never archived, which is the same reason the archive policy exists.
+
 ---
 
 ## Every wait names the artefact that ends it
@@ -363,15 +450,15 @@ which is the blind state §1 of `verification.md` defines, and it is not an appr
 from inside the channel, and let them say so:
 
 ```sh
-n=$(ls -1 *.md 2>/dev/null | wc -l)
+n=$(ls -1 2*.md 2>/dev/null | wc -l)
 [ "$n" -eq 0 ] && { echo "BLIND: no messages here. Wrong directory, or no channel yet." >&2; exit 2; }
 echo "EXAMINED: $n messages"
 ```
 
 ```sh
 # Open questions: state: open, minus anything a later message answers.
-answered=$(grep -hE '^re: +' *.md | awk '{print $2}' | grep -v '^-$' | sort -u)
-for f in $(grep -lE '^state: +open$' *.md); do
+answered=$(grep -hE '^re: +' 2*.md | awk '{print $2}' | grep -v '^-$' | sort -u)
+for f in $(grep -lE '^state: +open$' 2*.md); do
   echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
 done
 ```
@@ -379,8 +466,8 @@ done
 ```sh
 # What waits on the person: anything addressed to them that nothing has answered.
 # Both kinds, because they arrive at very different rates.
-answered=$(grep -hE '^re: +' *.md | awk '{print $2}' | grep -v '^-$' | sort -u)
-for f in $(grep -lE '^to: +(owner|both)$' *.md); do
+answered=$(grep -hE '^re: +' 2*.md | awk '{print $2}' | grep -v '^-$' | sort -u)
+for f in $(grep -lE '^to: +(owner|both)$' 2*.md); do
   grep -qE '^state: +(open|escalated)$' "$f" || continue
   echo "$answered" | grep -qx "$(basename "$f")" || echo "$f"
 done
@@ -397,9 +484,9 @@ of escalating — so the better it works, the emptier that query gets, and its f
 returning zero, which reads as *nothing needs you*.
 
 ```sh
-grep -lE '^from: +owner$' *.md     # every decision the person has made
+grep -lE '^from: +owner$' 2*.md     # every decision the person has made
 
-ls -1 | tail -20                   # the last twenty messages, in order
+ls -1 2*.md | tail -20                   # the last twenty messages, in order
 ```
 
 **How an escalation is closed:** a message `from: owner` whose `re:` points at it. That makes
@@ -423,7 +510,7 @@ fine — but then it has chosen to let the queries slow down, and choosing is th
 
 ## Working with it
 
-**Before writing, read.** `ls -1 | tail -20` is enough to know whether your question is already
+**Before writing, read.** `ls -1 2*.md | tail -20` is enough to know whether your question is already
 answered.
 
 **Before answering, check `head:`.** If it is a `sha:` and the project has moved past it, say so

@@ -19,6 +19,8 @@ reference/floor-mechanism.md
 reference/git-annex.md
 assets/exchange-README.md
 assets/message-template.md
+assets/gtd-msg.sh
+assets/channel-status.sh
 assets/bootstrap-code.md
 assets/bootstrap-cowork.md
 assets/config-template.md

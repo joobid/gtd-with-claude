@@ -308,6 +308,29 @@ The last two are there because they are two of the four floor classes, and the f
 at setup while this table is the instrument used every day. A floor that half the daily triage does
 not mention is a floor that gets forgotten by Tuesday.
 
+### When a green command prompts, the tool was wrong — not the permissions
+
+**Measured.** An agent asked to read three channel messages with a `for` loop over `cat`, and the
+prompt cited `Contains simple_expansion`. That is a **syntax heuristic, not a rule**: the person is
+not deciding *"yes, read those messages"*, they are deciding *"yes, this command has a variable in
+it"*, and every distinction built into the patterns stops one step short of the button.
+
+Reading is the greenest row on this table, and it stopped. The instinct on receiving it is to save
+a standing approval, which would install a policy over `for` — a shape that can carry anything.
+That is the worst exit available, and the table had nothing to say that pointed anywhere else.
+
+**Reach for the tool that does not execute:**
+
+| For | Use |
+|---|---|
+| Reading a file | `Read` |
+| Searching across files | `Grep` / `Glob` |
+| Querying JSON | `jq` |
+| Running an actual program | Bash |
+
+**A green row that prompts is a signal about the tool, not about the floor.** It is also the cost
+the person pays most often in a day, so it is worth one line here rather than a shrug.
+
 **If you do not understand what a command does, it is red.** Not from general caution: a command
 can look like it measures and measure nothing.
 

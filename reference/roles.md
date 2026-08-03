@@ -55,6 +55,25 @@ exactly what it exists to review. **Whoever runs it, it leaves a log.**
 
 ---
 
+### And the person is not only the recorder — they are the carrier
+
+The asymmetry above reads as a limitation: an agent cannot tell *"ran without asking"* from
+*"prompted, and they approved"*, so only the person can record it. True, and incomplete.
+
+**Measured.** A permission modal appeared in the implementing session, the person pasted it
+verbatim into the reviewing one, and the reviewing agent could then falsify a premise the
+implementing agent had stated about its own process. **Neither agent could have reached that
+alone.** The person was not recording there, they were the only channel by which that observation
+could travel.
+
+So the practical form, which turns a dead end into a request: **when you say *"I cannot observe
+this"*, name who can and what they would have to bring back.** A stated limit is unfalsifiable and
+never expires. A named observer with a named artefact is a wait somebody can end.
+
+That is different from handing them a message to relay, and the difference is what travels. An
+observation only they can make travels **toward** the channel and gets written down. A summary of
+something already in the channel travels **away** from it, and that one is the cable.
+
 ## Who is asked, and when
 
 The person is brought in when, and only when:

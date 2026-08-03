@@ -123,18 +123,31 @@ def run(script: str, cwd: Path) -> tuple[int, str, str]:
 # The fixture, built by the documented writer
 # ---------------------------------------------------------------------------
 
-def writer_block() -> str:
-    """The block `assets/message-template.md` documents. Extracted, never reimplemented.
+WRITER = ROOT / "assets/gtd-msg.sh"
 
-    This is the whole point. A second implementation agrees with whichever side its
-    author had in mind and cannot see a drift between the writer and the queries --
-    which is the defect that made this file necessary.
+
+def write_message(ch: Path, tmp: Path, author: str, frm: str, to: str,
+                  re_: str, state: str, slug: str) -> str:
+    """Create one fixture message BY RUNNING THE SHIPPED WRITER.
+
+    This used to extract a fenced block out of `message-template.md`, because the writer
+    was a block the agent retyped. It is a script now, and running it is strictly better:
+    the fixture is produced by the exact artefact that ships, guards included.
+
+    Two properties come free from invoking it directly rather than through `bash`:
+    **the executable bit is checked** (a bundle that loses it fails here rather than in
+    somebody's project), and so are the four refusals, since a writer that stopped
+    enforcing them would still build a fixture and the queries would silently drift.
     """
-    for _, b in extract(ROOT / "assets/message-template.md"):
-        if 'cat > "$MSG"' in b:
-            return b
-    raise SystemExit("FATAL: assets/message-template.md no longer contains the writer "
-                     "block this fixture is built from. Nothing was checked.")
+    if not WRITER.is_file():
+        raise SystemExit(f"FATAL: {WRITER.name} is gone. The fixture is built by the "
+                         f"shipped writer, so nothing was checked.")
+    cmd = (f'"{WRITER}" --channel "{ch}" --author {author} --from {frm} --to {to} '
+           f'--re {re_} --state {state} --slug {slug} <<\'EOF\'\nbody\nEOF\n')
+    rc, out, err = run(cmd, tmp)
+    if rc != 0 or not out:
+        raise SystemExit(f"FATAL: the shipped writer failed ({rc}): {err or out}")
+    return Path(out.splitlines()[-1]).name
 
 
 def build_fixture(ch: Path, tmp: Path) -> dict[str, set[str]]:
@@ -146,20 +159,8 @@ def build_fixture(ch: Path, tmp: Path) -> dict[str, set[str]]:
     for a in ("assets/exchange-README.md", "assets/message-template.md"):
         shutil.copy(ROOT / a, ch / ("README.md" if "exchange" in a else "message-template.md"))
 
-    block = writer_block()
-
     def write(author, frm, to, re_, state, slug) -> str:
-        b = block
-        for var, val in (("CHANNEL", str(ch)), ("AUTHOR", author), ("FROM", frm),
-                         ("TO", to), ("SLUG", slug), ("RE", re_), ("STATE", state)):
-            b, n = re.subn(rf'^{var}="[^"]*"', f'{var}="{val}"', b, count=1, flags=re.M)
-            if not n:
-                raise SystemExit(f"FATAL: the documented writer no longer sets {var}. "
-                                 f"The fixture cannot be built, so nothing was checked.")
-        rc, out, err = run(b, tmp)
-        if rc != 0 or not out:
-            raise SystemExit(f"FATAL: the documented writer failed: {err or out}")
-        return Path(out.splitlines()[-1]).name
+        return write_message(ch, tmp, author, frm, to, re_, state, slug)
 
     q1 = write("cowork", "cowork", "code", "-", "open", "q-one")
     q2 = write("cowork", "cowork", "code", "-", "open", "q-two")
@@ -171,7 +172,11 @@ def build_fixture(ch: Path, tmp: Path) -> dict[str, set[str]]:
     e2 = write("code", "code", "owner", "-", "escalated", "esc-closed")
     d1 = write("cowork", "owner", "both", e2, "settled", "decision-closing-esc")
     d2 = write("code", "owner", "both", "-", "settled", "decision-standalone")
-    c2 = write("cowork", "cowork", "code", "-", "consensus", "note")
+    # `re:` pointing at the other agent, because that is what the protocol requires and
+    # the shipped writer now refuses without it. The hand-written block this fixture used
+    # to be built from let an invalid `consensus` through for months, and nothing noticed
+    # until the writer became a script that enforces its own rule.
+    c2 = write("cowork", "cowork", "code", q3, "consensus", "note")
     # The common case, and the one the fixture was missing: an agent has prepared
     # something and needs the person. `to: owner` + `state: open`, exactly as the
     # bootstrap prompts prescribe. A day of real use produced three of these and zero
@@ -179,12 +184,15 @@ def build_fixture(ch: Path, tmp: Path) -> dict[str, set[str]]:
     w1 = write("code", "code", "owner", "-", "open", "block-awaiting-you")
 
     return {
-        "open": {q1, q2, q3, w1},                   # q4 is answered by a later re:
+        "open": {q1, q2, w1},                       # q3 and q4 are answered by later re:
         "escalated": {e1},                          # e2 is closed by an owner decision
         "waiting": {e1, w1},                        # addressed to the person, unanswered
         "owner": {d1, d2},
         "consensus": {c1, c2},
-        "listing": {p.name for p in ch.iterdir()},  # messages plus the two copied docs
+        # Messages only. The queries use `2*.md` and not `*.md`, because the channel
+        # carries its own README and message template and a bare glob counts those two
+        # as messages -- which is what "EXAMINED: 13 messages" said when there were 11.
+        "listing": {p.name for p in ch.iterdir() if p.name.startswith("2")},
     }
 
 
@@ -197,7 +205,11 @@ def build_fixture(ch: Path, tmp: Path) -> dict[str, set[str]]:
 # looser test read that as a query with no ground truth -- an instrument reporting a
 # finding about the very command it depends on.
 KEY_GREP = re.compile(r"grep [^\n]*'\^(state|from|re|to): ?\+?")
-BARE_LS = re.compile(r"(^|\n)\s*ls -1(\s*\||\s*$)")
+# `ls -1` optionally narrowed to `2*.md`. The narrowing was added to stop the channel's own
+# README and message template being counted as messages, and it silently dropped both listing
+# queries out of this checker's scope -- two fewer comparisons, and an OK. A pattern that
+# recognises one spelling of a query stops recognising it the day somebody improves the query.
+BARE_LS = re.compile(r"(^|\n)\s*ls -1( +2\*\.md)?(\s*\||\s*$)")
 
 
 def is_channel_query(unit: str) -> bool:
@@ -361,14 +373,8 @@ def self_test(ch: Path, expect: dict[str, set[str]], tmp: Path) -> bool:
             print(f"       {f}")
         return False
 
-    block = writer_block()
-
     def plant(frm, to, re_, state, slug) -> None:
-        b = block
-        for var, val in (("CHANNEL", str(ch)), ("AUTHOR", "code"), ("FROM", frm),
-                         ("TO", to), ("SLUG", slug), ("RE", re_), ("STATE", state)):
-            b = re.sub(rf'^{var}="[^"]*"', f'{var}="{val}"', b, count=1, flags=re.M)
-        run(b, tmp)
+        write_message(ch, tmp, "code", frm, to, re_, state, slug)
 
     mutations = [
         ("an extra decision by the person", "owner",
@@ -469,8 +475,8 @@ def main() -> int:
             print(f"  FAIL {f}")
         print(f"\nEXAMINED: {scope['compared']} channel queries and {floor_checked} floor "
               f"log template compared against a "
-              f"{len(expect['listing'])}-file fixture built by the writer "
-              f"assets/message-template.md documents")
+              f"{len(expect['listing'])}-file fixture built by the shipped "
+              f"writer, assets/gtd-msg.sh")
         print(f"NOT EXAMINED: {scope['skipped']} units that are not channel queries, and "
               f"{scope['unfenced_with_commands']} of {scope['unfenced']} blocks in a fence "
               f"other than ```sh carry commands -- including both bootstrap prompts, which "

@@ -2,7 +2,7 @@
 name: gtd-with-agents
 description: Set up and run the three-party working method for a project driven by Claude Code and Claude Cowork together — a file-based channel the two agents use to talk to each other, an explicit delegation contract that records what the person decides and what they hand over, and the verification culture that makes agreement between two agents worth anything. Use this whenever someone is starting a project with both Claude Code and Cowork, asks how the two should coordinate, says they are tired of copying questions from one session and pasting answers into the other, asks "who decides what here", "how do I stay informed without approving everything", "how much can I delegate", or wants to install a working agreement, an exchange channel, or an approval policy between agents. Also use when a session arrives cold at a project that already has this method installed and needs to pick it up.
 metadata:
-  version: 0.1.8
+  version: 0.2.0
 ---
 
 # Get Things Done with Claude
@@ -138,18 +138,64 @@ Ask, or detect and confirm:
   never gets committed. See `reference/git-annex.md`
 - **Without one** — a plain folder such as `exchange/`
 
-Create the directory and copy **two** files into it:
+Create the directory and copy **three** files into it:
 
 | From | To | Why |
 |---|---|---|
 | `assets/exchange-README.md` | `<channel>/README.md` | The channel explains itself to whoever opens it |
-| `assets/message-template.md` | `<channel>/message-template.md` | **It carries the command that reads the clock** |
+| `assets/message-template.md` | `<channel>/message-template.md` | How to call the writer, and what it enforces |
+| `assets/gtd-msg.sh` | somewhere on the implementing side, **executable** | **It is the writer.** Keep the executable bit |
 
-The second one is not optional and the reason is specific. Claude Code never sees this skill's
-files — they live in Cowork's cache. Telling it to "use the command in the template" while the
-template is somewhere it cannot reach is prose citing an identifier, and nothing reads prose: it
-will type the timestamp from its own context instead, which is the one defect the protocol is most
-emphatic about, and it fails silently until a message sorts in front of its own reply.
+None of the three is optional and the reason is specific. Claude Code never sees this skill's
+files — they live in Cowork's cache. Telling it to "use the writer" while the writer is somewhere
+it cannot reach is prose citing an identifier, and nothing reads prose: it will build the header
+from its own context instead, which is the one defect the protocol is most emphatic about, and it
+fails silently until a message sorts in front of its own reply.
+
+Then allow the writer once, by entry point:
+
+```
+allow: Bash(<path>/gtd-msg.sh*)
+```
+
+Without that line the person approves a prompt **on every single message**, because the shape the
+writer used to have — filename by substitution, body by heredoc — is one no permission pattern can
+cover. That was measured, and it is the highest recurring cost the method has.
+
+### Step 4b · The per-turn channel notice, which is two pieces
+
+**`assets/channel-status.sh` plus the registration that makes the tool run it.** Install both or
+install neither: an executable asset with no registration is a file that never executes, which is
+the same shape as a permission rule the tool accepts and never evaluates.
+
+1. Copy the script to the implementing side, executable.
+2. Write the registration. In Claude Code that is a `UserPromptSubmit` hook in
+   `.claude/settings.json`, and the timeout is written explicitly because the 30-second default
+   **discards the hook's output in silence** when it expires:
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      { "hooks": [
+          { "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/channel-status.sh",
+            "timeout": 10 } ] }
+    ]
+  }
+}
+```
+
+3. **Check that the hook fires, not that the file exists.** Ask the person to type any prompt and
+   report whether the notice appears. Two pieces means two ways to have done half the job, and
+   both of them leave the script on disk looking installed.
+4. **Probe it against a channel with something in it.** Over an empty one it prints nothing and
+   looks correct, which is the blind check this method exists to catch.
+
+Then record it in the configuration, including what it does **not** do: it fires when the person
+types, so a message written mid-milestone surfaces at the next turn rather than immediately, and
+it covers **one side only** unless the reviewing agent's tool offers an equivalent. `protocol.md`
+has the reasoning; the configuration has the row.
 
 ### Step 5 · Write the configuration
 
@@ -184,8 +230,24 @@ state/events frontier applied to the method's own installation.
 So during setup, **ask the person to confirm it is installed on the implementing side too**, and
 tell them where it goes. For Claude Code that is a skills directory on the filesystem:
 
-**Give them one of these two, not both.** They are alternatives, and a single fenced block
-holding both installs the skill twice — the "or" lives in a shell comment, which nothing reads.
+**You cannot run this install yourself, and finding that out costs two failed attempts.** The
+reviewing agent's sandbox refuses any write whose destination is `.claude/skills/<name>/` — writing
+to a sibling directory works, reading the source works, copying to `/tmp` works, and only that
+destination fails. The guard is reasonable: an agent installing its own skill is adjacent to an
+agent editing its own permissions. **So prepare the block and hand it over**, exactly as you do
+with the permission configuration. Write the log before attempting, so a refused attempt looks
+refused rather than absent.
+
+**And in a Cowork session there is no `.skill` file to unzip.** The skill exists as a **directory**
+in the plugin cache, under a temporary path that gets regenerated, so the path has to be located
+rather than remembered:
+
+```sh
+SRC=$(find /var/folders -type d -name gtd-with-agents 2>/dev/null | head -1)
+mkdir -p .claude/skills && cp -R "$SRC" .claude/skills/
+```
+
+Where a release bundle *is* available, unzip works instead. **Give them one of these, not several.**
 
 All their projects:
 
@@ -200,6 +262,9 @@ Or this project only, shared with whoever has the repository:
 mkdir -p .claude/skills
 unzip -q gtd-with-agents.skill -d .claude/skills
 ```
+
+**Verify the copy by hash, not by count.** Thirteen files present says nothing about thirteen files
+intact.
 
 The bundle carries its own folder, so it unzips **into** the skills directory and lands at
 `<dir>/gtd-with-agents/SKILL.md`. Then `/gtd-with-agents` works in a new session there.
