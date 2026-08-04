@@ -306,7 +306,16 @@ copying and the risk of transcription — not the waiting.
 **That is true about notifications and was being read as true about attention.** Between *no push*
 and *the person has to mention it* there is a step, and skipping it puts the cable back: a message
 written mid-milestone waits for somebody to bring it up. `channel-status.sh` is that step, wired to
-whatever the tool fires every turn. Installing it is Step 4b of `SKILL.md`, which is also where the
+whatever the tool fires every turn. **And its cost is not latency, which is how it reads.** *"It surfaces on the next turn"*
+sounds like a delay. What it actually is: **work done against a premise that has already been
+superseded**, and its size is bounded by the other agent's turn length rather than by how long
+the message waits. Measured: a decision to reorder was written at 07:22, and at 08:57 the other
+side had produced 364 lines against the sprint that had been reordered ninety minutes earlier.
+Nobody proposes a push mechanism, and rightly — an agent interrupted mid-milestone is a worse
+failure than one an hour behind. What changes behaviour is knowing which cost it is: whoever
+reorders says it louder, and whoever is about to start something large re-derives first.
+
+Installing it is Step 4b of `SKILL.md`, which is also where the
 reason it is **two** pieces lives — an executable with no registration is a file that never runs.
 
 ## Every wait names the artefact that ends it

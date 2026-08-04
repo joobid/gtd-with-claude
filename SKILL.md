@@ -2,7 +2,7 @@
 name: gtd-with-agents
 description: Set up and run the three-party working method for a project driven by Claude Code and Claude Cowork together — a file-based channel the two agents use to talk to each other, an explicit delegation contract that records what the person decides and what they hand over, and the verification culture that makes agreement between two agents worth anything. Use this whenever someone is starting a project with both Claude Code and Cowork, asks how the two should coordinate, says they are tired of copying questions from one session and pasting answers into the other, asks "who decides what here", "how do I stay informed without approving everything", "how much can I delegate", or wants to install a working agreement, an exchange channel, or an approval policy between agents. Also use when a session arrives cold at a project that already has this method installed and needs to pick it up.
 metadata:
-  version: 0.5.0
+  version: 0.6.0
 ---
 
 # Get Things Done with Claude
@@ -410,6 +410,42 @@ command into the configuration and check it returns something before claiming it
 **A consensus that changes a plan, a guide or a scope lands in a permanent project file in the same
 milestone, or it did not happen.** `--lands-in` makes the writer refuse without it; `--audit`
 checks afterwards that the path exists and is tracked.
+
+### How to write to the person
+
+**Applies to everything that reaches them** — chat, channel message, state file. Four sections,
+in this order, and nothing outside them:
+
+| | |
+|---|---|
+| 1 | **What you have to do** — or plainly: nothing |
+| 2 | **The options and what each costs** |
+| 3 | **What stops if you do not answer** |
+| 4 | **Where the evidence is** — a path or a command, never a summary of one |
+
+`gtd-msg.sh` refuses a `--decide` missing any of the four. **That is the only part enforced**,
+and it covers one message kind: what you type in the chat passes through no writer at all.
+
+**There is no word cap**, and that was measured rather than judged. A 400-word limit shipped for
+one round; 8 of 9 real bodies were over it — 1015, 777, 704, 642, 593, 558, 502, 480, 400. And a
+cap cannot tell **compressing** from **hiding**: faced with a limit, an agent can write less,
+split in two, or leave a summary and point at the channel. All three fit the limit, and the third
+is the defect the four sections exist to close. The complaint was *paragraphs I cannot follow,
+with no clear actions* — locatable actions, not volume.
+
+**Four things do not go in, and this half is not mechanised:**
+
+- adjectives that do not change a decision
+- claims with no number, path or command behind them
+- appraisal formulas — *good question*, *interesting*, *worth doing*, *you are right*
+- the narration of how the finding was reached
+
+Detecting those would be a classifier, and a classifier in this series fired on **0 of 29** real
+messages including both it existed to catch. It is a writing rule sitting beside four
+requirements that are not, and saying which is which is the point.
+
+**The reasoning is not deleted — it stays in the channel.** What is removed from what reaches
+them is the narration, not the information.
 
 ### When they ask what happens next
 

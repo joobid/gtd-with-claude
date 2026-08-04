@@ -144,7 +144,9 @@ def write_message(ch: Path, tmp: Path, author: str, frm: str, to: str,
                          f"shipped writer, so nothing was checked.")
     cmd = (f'"{WRITER}" --channel "{ch}" --author {author} --from {frm} --to {to} '
            f'--re {re_} --state {state} --slug {slug} {extra}<<\'EOF\'\n'
-           f'## body\nbody\nEOF\n')
+           f'## body\nbody\n\n## What you have to do\nnothing\n'
+           f'\n## Options and their cost\nnone\n\n## What stops\nnothing\n'
+           f'\n## Evidence\nMANIFEST\nEOF\n')
     rc, out, err = run(cmd, tmp)
     if rc != 0 or not out:
         raise SystemExit(f"FATAL: the shipped writer failed ({rc}): {err or out}")

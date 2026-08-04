@@ -89,6 +89,33 @@ That is the whole installation. Everything it creates is a plain file you can re
 
 ---
 
+## It can work while you are not there
+
+**Status: designed, no observed executions. 2026-08-04.** Nothing below has run. It is a contract
+for bounding an execution with nobody watching, not a report of what was measured. Selling an
+untested thing as tested is the defect this whole method exists to catch, and it would be an ugly
+place to commit it.
+
+**What you get.** A bounded queue — one item per run, and only you or the other agent put things
+in it. Work done between your turns. A state file in your language that you can read in two
+minutes, saying what happened and what is waiting on you, with *"decisions waiting on you: none"*
+as a required answer rather than an omission.
+
+**An empty queue is a RESULT.** An agent that invents work to avoid stopping is worse than one
+that stops.
+
+**What is never delegated.** The merge. Approving a plan. Accepting a closure. Changing scope
+mid-flight. The permission configuration.
+
+The reason is general rather than a preference: **committing to a branch is reversible and
+publishes nothing; merging is what makes something count.** A green tick is not an authorisation.
+
+`reference/unattended.md` is the contract, including the part that blocks it — a permission value
+meaning *ask* has no defined behaviour when there is nobody to ask, so an unattended run treats
+every one of them as a refusal.
+
+---
+
 ## The problem it solves
 
 When you run two Claude sessions on the same project, they cannot talk to each other. So you do

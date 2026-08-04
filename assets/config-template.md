@@ -92,6 +92,46 @@ indistinguishable from a row nobody reached, and this file is what gets re-read 
 drifts. Where one group's answer does not fit all of its rows, the rows differ — that is expected,
 and the Notes column says which grouped answer they came from.
 
+## Which paths are always theirs
+
+**Two delegations that both have to hold, and they answer different questions.** The sprint
+window says *when* something may be committed; this table says *which files*. Neither replaces
+the other.
+
+It exists because failing closed had a cost nobody priced: the sprint delegation covered "that
+sprint", the reviewing agent's documentary output belonged to no sprint, and **22 files sat
+uncommitted from 07:26** because no agent could touch them.
+
+**A blank table means "everything is delegable", which is nobody's intended default**, so the
+setup asks for these rather than leaving them empty. `channel-status.sh --blocked` reads it to
+attribute owners, and says BLIND rather than guessing when it is empty.
+
+| Path | | |
+|---|---|---|
+| `<e.g. prd/**>` | always theirs | explicit confirmation, including the closing `git mv` |
+| `<e.g. CLAUDE.md>` | always theirs | |
+| `<e.g. gtd-config.md>` | always theirs | |
+| `<e.g. .claude/**>` | always theirs | an agent that can edit its own permissions has advisory limits |
+| `<e.g. docs/**>` | delegable by consensus | |
+| `<e.g. sprints/**>` | delegable by consensus | |
+| `<e.g. README.md>` | delegable by consensus | |
+
+**No exception for the closing `git mv`**, on a real decision: the simple rule beat the
+lower-friction one.
+
+**And analysis documents whose conclusions end up in a requirements file are NOT gated.** The
+gate is the requirements file; gating the analysis reviews the same decision twice.
+
+## Decisions taken about the method itself
+
+Recorded here so a later round does not re-propose something already ruled out, and cannot
+re-propose it without seeing the measurement that killed it.
+
+| Date | Decision | The figure behind it |
+|---|---|---|
+| 2026-08-04 | **No word cap on a message reaching the person.** The four required sections stay | A 400-word cap shipped for one round. Against the real channel, **8 of 9 `--decide` bodies were over it**: 1015, 777, 704, 642, 593, 558, 502, 480, 400. The number had been chosen by judgement, not by measuring — and a cap cannot tell compressing from hiding, where hiding is cheaper and is the defect the sections exist to close |
+| `<date>` | `<decision>` | `<figure or path>` |
+
 ## The floor — not configurable, and honest about what enforces it
 
 Refused regardless of anything above. The reason is written because a limit whose reason is not

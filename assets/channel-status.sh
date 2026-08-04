@@ -56,11 +56,14 @@ while [ $# -gt 0 ]; do
     --audit)   MODE=audit; RUNS="${2:-}"; if [ -n "${2:-}" ] && [ "${2#-}" = "$2" ]; then shift 2; else RUNS=""; shift; fi ;;
     --accept)  ACCEPT=1;   shift ;;
     --fyi)     MODE=fyi;   shift ;;
+    --delegation) MODE=deleg; shift ;;
+    --blocked) MODE=blocked; shift ;;
+    --paths)   PATHS="$2"; shift 2 ;;
     -h|--help) sed -n '3,38p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "channel-status: unknown argument: $1" >&2; exit 2 ;;
   esac
 done
-MODE="${MODE:-notice}"; RUNS="${RUNS:-}"; ACCEPT="${ACCEPT:-0}"
+MODE="${MODE:-notice}"; RUNS="${RUNS:-}"; ACCEPT="${ACCEPT:-0}"; PATHS="${PATHS:-gtd-config.md}"
 
 # A-02 at level 1. `grep -l '^state: open' *.md` returned 33 where there were 32, three
 # times in eighteen hours across three sessions: the channel keeps its own README, and
@@ -299,6 +302,117 @@ if [ -n "$SELFTEST" ]; then
   exit 0
 fi
 
+# Bounded delegation, derived from two conditions in AND: an acceptance recorded in the
+# channel, and a branch that exists and is unmerged in git. The second lives in version
+# control; the channel usually does not, so neither alone is the answer.
+#
+# An orphaned window needs no timeout -- a new sprint brings its own rule -- so this
+# prints how long it has been open with nothing happening and leaves the judgement out.
+# What is stopped, DERIVED. `blocks:` is prospective and per-question -- an agent writes it
+# while asking something, meaning "if you do not answer, X stops". What the person asks is
+# retrospective and aggregate: "how much is stopped and why". Different measurements, and
+# only the first existed. Accumulation is not born of a question, so nobody writes a
+# `blocks:` for it.
+#
+# Measured the day this was found: the field said five declared, all answered, zero live
+# blocks -- correct by the field, and false. On disk at that moment: 22 uncommitted files,
+# 8 unmerged branches carrying 105 commits, 7 of 9 `--decide` unanswered.
+#
+# And the counts that WERE reported came from reading and remembering: 11 files, then 21,
+# and there were 22; "a branch with nine commits" when it was eight branches with 105. The
+# exact numbers are two commands nobody ran. `blocks:` is not retired -- it covers the
+# prospective case and covers it well.
+#
+# The owner column is what makes this readable. Without it the report says "105 commits in
+# 8 branches" and the person has to ask which are theirs. Most are not.
+if [ "$MODE" = blocked ]; then
+  echo "=== what is stopped, derived from git and the channel ==="
+  always=$(sed -n 's/^| *`\([^`]*\)` *| *always theirs.*/\1/p' "$PATHS" 2>/dev/null || true)
+  [ -n "$always" ] || always=$(sed -n '/always theirs/,/^$/p' "$PATHS" 2>/dev/null | grep -oE '`[^`]+`' | tr -d '`' || true)
+
+  # An empty path table is not "everything is delegable": it is a table nobody filled in,
+  # and attributing every file to the agent from it would be the blind state this method
+  # refuses everywhere else.
+  if [ -z "$always" ]; then
+    echo "  BLIND on ownership: no always-theirs paths found in $PATHS."
+    echo "  Counts below are real; the yours/agent's split is not. Fill the table first."
+  fi
+  n=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+  mine=0; theirs=0
+  for f in $(git status --porcelain 2>/dev/null | awk '{print $NF}'); do
+    hit=no
+    for pat in $always; do
+      case "$f" in ${pat%\*\*}*) hit=yes ;; esac
+    done
+    if [ "$hit" = yes ]; then theirs=$((theirs + 1)); else mine=$((mine + 1)); fi
+  done
+  old=$(git status --porcelain 2>/dev/null | awk '{print $NF}' | head -1)
+  echo "  uncommitted:        $n files   yours: $theirs   the agent's: $mine"
+  [ -n "$old" ] && echo "                      oldest tracked here: $old"
+
+  tot=0; wpr=0; wopr=0
+  for b in $(git branch --format='%(refname:short)' 2>/dev/null | grep -v '^main$'); do
+    c=$(git log --oneline "main..$b" 2>/dev/null | wc -l | tr -d ' ')
+    [ "$c" -gt 0 ] || continue
+    tot=$((tot + c))
+    if gh pr list --head "$b" --state open --json number 2>/dev/null | grep -q number; then
+      wpr=$((wpr + c)); echo "  branch YOURS        $b  $c commits  (PR open -- the merge is always yours)"
+    else
+      wopr=$((wopr + c)); echo "  branch agent's      $b  $c commits  (no PR -- in flight, not a decision)"
+    fi
+  done
+  echo "  unmerged total:     $tot commits   yours: $wpr   the agent's: $wopr"
+
+  ( cd "$CHANNEL" 2>/dev/null || exit 0
+    nd=0
+    for f in $(grep -l '^decide:' 2*.md 2>/dev/null || true); do
+      grep -lq "^re: $f\$" 2*.md 2>/dev/null && continue
+      nd=$((nd + 1))
+      age=$(( ( $(date -u +%s) - $(date -u -d "$(echo "$f" | cut -c1-8) $(echo "$f" | cut -c10-11):$(echo "$f" | cut -c12-13)" +%s 2>/dev/null || date -u +%s) ) / 3600 ))
+      printf '  decide YOURS        %3sh  %s\n' "$age" "$f"
+    done
+    echo "  unanswered decides: $nd"
+    # And the declared field, checked against reality rather than trusted. It fails both
+    # ways: it misses what nobody declared, and it holds what has already been resolved.
+    for f in $(grep -l '^blocks:' 2*.md 2>/dev/null || true); do
+      grep -lq "^re: $f\$" 2*.md 2>/dev/null && \
+        printf '  stale blocks:       %s  (answered, and the field still says it blocks)\n' "$f"
+    done )
+
+  echo "EXAMINED: git status, git branch --no-merged, open PRs, and the channel's decides."
+  echo "NOT EXAMINED: whether the work in those branches is finished. This counts what is"
+  echo "  stopped, not what is ready."
+  exit 0
+fi
+
+if [ "$MODE" = deleg ]; then
+  [ -d "$CHANNEL" ] || { echo "BLIND: $CHANNEL is not a directory. This is not a pass." >&2; exit 2; }
+  acc=$(cd "$CHANNEL" && grep -lE '^delegation: +accepted$' 2*.md 2>/dev/null | tail -1 || true)
+  br=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+  merged=""
+  if [ -n "$br" ] && [ "$br" != HEAD ]; then
+    git merge-base --is-ancestor HEAD origin/main 2>/dev/null && merged=yes || merged=no
+  fi
+  echo "EXAMINED: $CHANNEL for an acceptance, and git for an unmerged branch."
+  if [ -z "$acc" ]; then
+    echo "  DELEGATION: closed. No message carries delegation: accepted."
+    echo "  Approving a plan enables nothing. The person accepts the mode separately, or"
+    echo "  the previous one stands -- it fails closed."
+    exit 0
+  fi
+  echo "  accepted by:  $acc"
+  echo "  branch:       ${br:-none}   merged into origin/main: ${merged:-unknown}"
+  if [ "$merged" = yes ] || [ -z "$br" ] || [ "$br" = main ]; then
+    echo "  DELEGATION: closed. The window is the life of a branch."
+  else
+    d=$(( ( $(date -u +%s) - $(date -u -d "$(echo "$acc" | cut -c1-8) $(echo "$acc" | cut -c10-11):$(echo "$acc" | cut -c12-13)" +%s 2>/dev/null || echo "$(date -u +%s)") ) / 3600 ))
+    echo "  DELEGATION: open, ${d}h since it was accepted."
+    echo "  Still the person's, always: the merge, approving a plan, accepting a closure,"
+    echo "  changing scope, and the permission configuration."
+  fi
+  exit 0
+fi
+
 if [ "$MODE" = fyi ]; then
   [ -d "$CHANNEL" ] || { echo "BLIND: $CHANNEL is not a directory. This is not a pass." >&2; exit 2; }
   cd "$CHANNEL"
@@ -356,13 +470,31 @@ done
 [ -z "$waiting" ] && exit 0
 n=$(printf '%s' "$waiting" | grep -c . || true)
 
+# M26: split by who typed it. Measured -- 74% of the reviewing agent's derivation was its
+# own messages, against 9% on the implementing side. Not excluded: `to: both` means both,
+# and an agent must be able to find its own unanswered proposals. Split, so the reader can
+# stop after the first heading. The author is only in the filename; the front matter does
+# not record it, which is why this matches on `-$ME-` rather than on a field.
 body=$( {
   echo "CHANNEL: $n message(s) addressed to you that nothing has closed."
-  printf '%s' "$waiting" | while IFS= read -r f; do
+  printf '%s' "$waiting" | grep -v -- "-$ME-" > "${TMPDIR:-/tmp}/cs-other-$$" || true
+  printf '%s' "$waiting" | grep -- "-$ME-" > "${TMPDIR:-/tmp}/cs-mine-$$" || true
+  for part in other mine; do
+    fl="${TMPDIR:-/tmp}/cs-$part-$$"
+    [ -s "$fl" ] || continue
+    [ "$part" = other ] && echo "  -- written by the other side --" \
+                        || echo "  -- yours, that nobody answered --"
+  while IFS= read -r f; do
     [ -n "$f" ] || continue
     st=$(sed -n 's/^state: *//p' "$f" | head -1)
-    printf '  %-10s %s/%s\n' "$st" "$CHANNEL" "$f"
+    # Age, because a --decide from forty hours ago and one from ten minutes ago stop
+    # being the same object the moment they are seen next to each other. No new field:
+    # the timestamp is already in the filename.
+    age=$(( ( $(date -u +%s) - $(date -u -d "$(echo "$f" | cut -c1-8) $(echo "$f" | cut -c10-11):$(echo "$f" | cut -c12-13)" +%s 2>/dev/null || date -u +%s) ) / 3600 ))
+    printf '  %-10s %3sh  %s/%s\n' "$st" "$age" "$CHANNEL" "$f"
+  done < "$fl"
   done
+  rm -f "${TMPDIR:-/tmp}/cs-other-$$" "${TMPDIR:-/tmp}/cs-mine-$$"
   echo "An open one needs an answer. A consensus one is agreed and not yet done: do it, or"
   echo "close it with a settled whose re: names this file. Only settled closes anything."
 } )

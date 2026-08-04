@@ -136,8 +136,16 @@ attempts failed on presentation alone before either reached a result:
 
 ### Step 4 · Write the log, and write it so an unfinished verification looks unfinished
 
-The log is created with the requests already in it and the outcomes empty, so a verification that
-was started and abandoned is visibly incomplete rather than absent:
+**The log is owed whatever happened**, including "no permission system here, nothing written".
+An event with no artefact is a claim.
+
+One row per request, and **the row records who observed each half**: the agent saw a result, the
+person saw whether a prompt appeared, and neither can report the other's half. A row with the
+outcome slot left blank reads as unfinished, which is the point — a template that lets a missing
+observation look like a completed one is the defect this whole file is about.
+
+The header says what it ran against: the version, the branch, the rules in force. A verification
+that does not say what it verified against cannot be judged still valid later.
 
 ```sh
 mkdir -p .runs
@@ -168,45 +176,7 @@ LOG=".runs/$(date -u +%Y%m%d-%H%M%S)-floor-verification.log"
 echo "LOG: $LOG"
 ```
 
-`>` is safe here because the timestamp makes the file new by construction. Everywhere else, `>` on
-an existing file is the wide scope of writing files.
-
-Three lines per request, not one, and the second is the one that resolves the whole exercise:
-
-| | |
-|---|---|
-| `outcome:` | refused outright / prompted / ran |
-| `cited:` | **what it named, verbatim.** *"Permission rule `Bash(rm *)` requires confirmation"* is a **rule**; *"contains compound_statement"* is a **heuristic that touched no rule at all**. Both read as *"it asked"*, and they mean opposite things |
-| `observed by:` | `agent` or `person`. A prompt can only be seen by the person — see the two-observer note in Step 3 |
-
-**The person fills `outcome:` and `observed by:`**, and the reason is the whole doctrine: the
-party that wants the answer to be yes does not get to record it.
-
-**But where the agent under test writes its own logs, cite those rather than paraphrasing them.**
-They are contemporaneous, they carry their own header, and nobody rewrote them — which is
-stronger than either option this file used to offer. A `cited:` line pointing at
-`<runs>/…-probe.log` beats a person's summary of what they remember seeing.
-
-And the log can then be checked, which is the point of building it this way:
-
-```sh
-echo "unfinished lines: $(grep -c 'outcome: *$' "$LOG" || true)"
-```
-
-**Anything but `0` means the verification is unfinished**, whatever the configuration says. A
-complete log has **eleven** blanks to fill: five requests in two shapes, plus row 6. If your
-template produces a different number from the procedure above, one of the two was changed without
-the other — and the pipeline of this repository now checks exactly that, because the first time it
-happened nobody noticed for a release. A
-`verified` pointing at a log with an empty outcome line is not a certification; it is a filename.
-
-The `|| true` is not decoration. `grep -c` **exits 1 when it matches nothing**, so without it the
-one state that means *the floor is fully verified* is the one state that returns a failure code —
-and this method puts command blocks into logs, hooks and pipelines as a matter of doctrine. It is
-the same shape as the check whose failure mode is to report success, inverted: a check whose
-success mode is to report failure, which gets silenced by whoever hits it first.
-
----
+**Never `verified` without a path to this file, and never with an empty outcome slot.**
 
 ## Why a deny list is weaker than it looks, and what to write instead of pretending otherwise
 
@@ -412,6 +382,25 @@ breaking it. If you cannot write the query, you cannot drop the rule.
 
 **And review this in a few weeks with the one datum that only appears in use: which prompts have
 always been granted.**
+
+## `ask` names a human, so without one it is undefined
+
+Three values, and **one of them presupposes a person**. In a scheduled run with nobody there, every
+`ask` rule has no defined behaviour: the tool may hang until a timeout, deny silently, or never
+evaluate the file. Measured on a real project — `deny 23 · ask 17 · allow 4` — that is **17 of 44
+rules undefined the moment the person is absent.**
+
+So: **an unattended run uses a profile where every `ask` is a `deny`**, and that is a property of
+the model rather than advice about configuration. `reference/unattended.md` carries the rest.
+
+**And ask the tool's maintainer what an `ask` does with nobody there. If nobody knows, write that
+down** — the same honesty as `attempted, not verified` in the table below.
+
+**One absolute moves out of prose while we are here.** *"Merging is always a human decision"* was
+held up on that project by `Bash(gh pr*)` sitting in `ask` — a modal with nobody to answer it. It
+belongs in the permanent floor as `deny Bash(gh pr merge*)`, which constrains the agent and not the
+person, who runs it in their own terminal. What it does not cover, said in the same breath: a local
+`git merge` and a push, or the web interface. It is a rule about one spelling, like all of them.
 
 ## What goes in the configuration
 

@@ -28,7 +28,7 @@
 set -euo pipefail
 
 AUTHOR=""; FROM=""; TO=""; RE="-"; STATE="open"; SLUG=""; SELFTEST=""
-CLOSES=""; LANDS_IN=""; DECISIONS=""; DECIDE=""; BLOCKS=""; FYI=""
+CLOSES=""; LANDS_IN=""; DECISIONS=""; DECIDE=""; BLOCKS=""; FYI=""; RECORD=""
 CHANNEL="${GTD_CHANNEL:-.runs/exchange}"
 
 while [ $# -gt 0 ]; do
@@ -44,6 +44,7 @@ while [ $# -gt 0 ]; do
     --decide)  DECIDE="$2";  shift 2 ;;
     --blocks)  BLOCKS="$2";  shift 2 ;;
     --fyi)     FYI=1;        shift ;;
+    --record)  RECORD=1;     shift ;;
     --channel) CHANNEL="$2"; shift 2 ;;
     --decisions) DECISIONS=1; shift ;;
     --selftest) SELFTEST=1; shift ;;
@@ -323,6 +324,31 @@ EOF
 ## nothing here needs you
 EOF
 
+  # --- 0.7.0 -------------------------------------------------------------
+  # Cheapest satisfying input for each, named as the round requires. All three are
+  # accepted because what they let through is VISIBLY thin -- four stub headings read
+  # as four stub headings. The failure they replace was invisible: a flag whose text
+  # said the opposite of the truth, and options sitting complete in the channel while
+  # the chat got a pointer to them.
+  LABEL="refuses --record unless --from is owner"; SAYING="must be owner"
+  refuses --author cowork --from cowork --to both --slug r1 --record
+
+  # Needs a body: the empty-body guard is also a content check and fires first, so
+  # `refuses` with </dev/null would report a refusal for the wrong reason.
+  LABEL="refuses a --decide missing the four sections"
+  secdir="$probe/sec"; mkdir -p "$secdir"
+  checks=$((checks + 1))
+  if printf '## something\nprose\n' | bash "$0" --channel "$secdir" --author cowork \
+       --from cowork --to owner --slug r2 --decide "A or B" --blocks "x" >/dev/null 2>&1; then
+    printf '  FAIL  %s\n' "$LABEL"; fails=$((fails + 1))
+  elif [ "$(ls -1 "$secdir" 2>/dev/null | wc -l | tr -d ' ')" -eq 0 ]; then
+    printf '  ok    %s\n' "$LABEL"
+  else
+    printf '  FAIL  %s\n' "$LABEL"; fails=$((fails + 1))
+  fi
+  rm -rf "$secdir"
+
+
   printf 'EXAMINED: %d checks, exercising the shipped writer against %s\n' "$checks" "$probe"
   # Said rather than implied. The tty guard is real and one line long, and the obvious
   # way to assert it -- run the writer under `script` with a fake terminal -- hangs the
@@ -426,13 +452,33 @@ fi
 # under a quarter of the queue it exists for.
 # ---------------------------------------------------------------------------
 if [ "$TO" = "owner" ] || [ "$TO" = "both" ]; then
-  if [ -n "$DECIDE" ] && [ -n "$FYI" ]; then
-    echo "gtd-msg: --decide and --fyi are the two cases. Not both." >&2; exit 2
+  n_kinds=0
+  [ -n "$DECIDE" ] && n_kinds=$((n_kinds + 1))
+  [ -n "$FYI" ]    && n_kinds=$((n_kinds + 1))
+  [ -n "$RECORD" ] && n_kinds=$((n_kinds + 1))
+  if [ "$n_kinds" -gt 1 ]; then
+    echo "gtd-msg: --decide, --fyi and --record are three cases. Pick one." >&2; exit 2
   fi
-  if [ -z "$DECIDE" ] && [ -z "$FYI" ]; then
-    echo "gtd-msg: a message reaching the person needs --decide '<the choice>' or --fyi." >&2
-    echo "  --fyi says plainly that nothing here needs them, and stays out of their queue." >&2
+  if [ "$n_kinds" -eq 0 ]; then
+    echo "gtd-msg: a message reaching the person needs --decide '<the choice>', --fyi or --record." >&2
+    echo "  --fyi   nothing here needs them" >&2
+    echo "  --record  their own words, written down by whoever heard them" >&2
     exit 2
+  fi
+  # `--record` is `from: owner` by construction: it is the person speaking, transcribed.
+  # Measured the day it was missing: all 13 records written that day carried `--fyi`, whose
+  # text says *nothing here needs you* -- false in the other direction, because it IS them.
+  # Ten of them then carried a hand-written line explaining what the flag really meant.
+  # A guard satisfied at minimum cost is the level-2 failure mode, and this was it.
+  # Cheapest satisfying input, and the note this replaces covered the OLD harm rather
+  # than the one the flag creates. `--from owner` on something that is not the person's
+  # words now enters the decision index, and both agents treat an entry there as settled.
+  # The risk existed before -- `from: owner` already fed that index -- but the friction
+  # just dropped, and a guard that lowers the cost of a wrong claim owes that sentence.
+  # Accepted, because the alternative is worse: without the flag, all thirteen records in
+  # one day carried `--fyi`, whose text says the opposite of the truth.
+  if [ -n "$RECORD" ] && [ "$FROM" != "owner" ]; then
+    echo "gtd-msg: --record is for the person's own words, so --from must be owner." >&2; exit 2
   fi
   if [ -n "$DECIDE" ] && [ -z "$BLOCKS" ]; then
     echo "gtd-msg: --decide requires --blocks '<what stops until they answer>'." >&2
@@ -482,14 +528,72 @@ if [ -z "$(printf '%s' "$BODY" | tr -d '[:space:]')" ]; then
   exit 2
 fi
 
+# What reaches the person has a fixed shape, and the shape is what does the work.
+# Style cannot be mechanised -- detecting "no adjectives that do not change a decision"
+# is a classifier, and this series has the case of one that fired on 0 of 29 messages
+# including both it existed to catch. Four required sections and a word cap leave no
+# room for narration, which is a different thing from forbidding it.
+#
+# Cheapest satisfying input: four headings with a word under each. Accepted, because it
+# is visibly empty -- a reader sees four stubs and knows. The failure this replaces was
+# not visible: options and costs sitting complete in the channel while the chat got
+# "the three options are in the channel with their cost". The template cannot make
+# somebody think; it can stop them handing over a pointer instead of the thing.
+if [ -n "$DECIDE" ]; then
+  miss=""
+  printf '%s' "$BODY" | grep -qi "what you have to do\|qué tienes que hacer" || miss="$miss 1"
+  printf '%s' "$BODY" | grep -qi "options\|opciones"                        || miss="$miss 2"
+  printf '%s' "$BODY" | grep -qi "stops\|queda parado\|blocked"            || miss="$miss 3"
+  printf '%s' "$BODY" | grep -qi "evidence\|evidencia"                      || miss="$miss 4"
+  if [ -n "$miss" ]; then
+    echo "gtd-msg: --decide needs the four sections. Missing:$miss" >&2
+    echo "  1 what you have to do (or: nothing)   2 options and their cost" >&2
+    echo "  3 what stops if you do not answer     4 evidence: a path or a command" >&2
+    echo "  The reasoning that produced them stays in the channel. This is what they read." >&2
+    exit 2
+  fi
+# THERE IS NO WORD CAP, and that was decided by measuring rather than by taste. A 400-word
+# cap shipped for one round; against the real channel, 8 of 9 `--decide` bodies were over it
+# -- 1015, 777, 704, 642, 593, 558, 502, 480, 400. The number had been picked by judgement,
+# which is the same class as the guard that fired on 0 of 29.
+#
+# The deeper reason: a hard cap cannot tell COMPRESSING from HIDING. Faced with 700 words and
+# a limit of 400, an agent can write less, split in two, or leave a summary and point at the
+# channel for the rest. All three produce a 400-word message, and the third is exactly M23 --
+# "the three options are in the channel with their cost" -- the defect the four sections exist
+# to close. A cap rewards compressing and hiding equally, and hiding is cheaper.
+#
+# The complaint it was answering was "paragraphs I cannot follow, with no clear actions", not
+# "too much information". Locatable actions, not volume. Nothing caps --record either: those
+# are the person's own words, and real ones reach 919.
+fi
+
 mkdir -p "$CHANNEL"
 
 # A-09 at level 1: the query runs here, not in a paragraph somebody has to recall.
 if [ "$TO" = "owner" ] || [ "$TO" = "both" ]; then
   idx=$(decision_index "$CHANNEL")
   if [ -n "$idx" ]; then
-    echo "gtd-msg: before this reaches them, what they have already decided:" >&2
-    printf '%s\n' "$idx" >&2
+    # AND THE INTERACTION WITH `--record`, which neither change examined on its own.
+    # The index now shows 8 of 60. A wrong `from: owner` written twenty decisions ago is
+    # invisible by default, where all sixty used to print. Accepted: sixty unread lines
+    # caught nothing either -- that was M25 -- and `--decisions` prints the lot on demand.
+    # What is genuinely lost is the accidental re-reading of an old entry, and the thing
+    # that replaces it is a person correcting a record they can now actually see.
+    #
+    # Capped, and the cap is a SELECTION rather than a CLASSIFIER. Filtering by relevance
+    # -- words of this message against the slugs of the decisions -- was the other option
+    # on the table, and this series already has the case: a guard that matched by pattern
+    # fired on 0 of 29 real messages, including both it existed to catch. A classifier
+    # fails silently on the one that does not look like the rest; a cap degrades legibly,
+    # and the count tells you what it is not showing.
+    ntot=$(printf '%s\n' "$idx" | grep -c . || true)
+    ncap="${GTD_INDEX_CAP:-8}"
+    echo "gtd-msg: before this reaches them, what they have already decided ($ntot):" >&2
+    printf '%s\n' "$idx" | tail -n "$ncap" >&2
+    if [ "$ntot" -gt "$ncap" ]; then
+      echo "gtd-msg: showing the $ncap most recent. The rest: gtd-msg.sh --decisions" >&2
+    fi
     echo "gtd-msg: if one of those answers what you just wrote, correct it with a new message." >&2
   fi
 fi
@@ -527,6 +631,7 @@ MSG="$CHANNEL/$TS-$AUTHOR-$SLUG.md"
   if [ -n "$DECIDE" ]; then echo "decide: $DECIDE"; fi
   if [ -n "$BLOCKS" ]; then echo "blocks: $BLOCKS"; fi
   if [ -n "$FYI" ]; then echo "fyi: true"; fi
+  if [ -n "$RECORD" ]; then echo "record: true"; fi
   echo "head: $HEAD"
   echo "---"
   echo

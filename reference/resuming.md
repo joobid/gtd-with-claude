@@ -179,3 +179,22 @@ Two things it does **not** mean:
 | It reports "nothing pending" on a busy project | It derived with `open` alone, so everything agreed-and-unexecuted was invisible. See the state table in `protocol.md` |
 | It asks the person to catch it up | It skipped step 2. The channel already holds the answer, and asking makes the person the cable |
 | It starts work and the first thing it produces is wrong in a way nobody saw coming | It skipped step 5. The reconstruction was never exposed to anyone who could check it |
+
+---
+
+## When the session before you was also a machine
+
+Nobody may have been in the loop for several runs. Two things to establish before trusting the
+picture, and both are cheap:
+
+- **How old is the newest `from: owner` message?** The derivation prints the age of each pending
+  item. A channel whose last human decision is forty hours old is being run on inference.
+- **Is the state file's end stamp newer than its start stamp?** A run that died halfway leaves the
+  previous state, which is indistinguishable from one that never started. Start stamp newer than
+  end stamp, by more than one cadence, means the last run did not finish.
+
+If the tree is dirty, **look for the signed mark**: a run leaves its identity and its hour. Dirty
+with your own mark is recoverable; with somebody else's it is not, and that is a finding to publish
+rather than something to clean up.
+
+`reference/unattended.md` carries the rest of the contract.
