@@ -32,25 +32,14 @@ allow: Bash(<path>/gtd-msg.sh*)
 
 ## What it enforces, so nobody has to remember it
 
-Four things that were prose until they were a script:
+The writer refuses a bad vocabulary, a `consensus` without `--re`, a `settled` without `--closes`,
+a `consensus` without `--lands-in`, a message reaching the person without `--decide`, `--fyi` or
+`--record`, and an empty body. **It reads its own clock and its own commit.**
 
-| | |
-|---|---|
-| **The four vocabularies** | `--author`, `--from`, `--to` and `--state` are checked against the values the protocol defines. A typo refuses and writes nothing |
-| **`consensus` requires `re:`** | One agent typing "we agreed" into its own front matter is a unilateral claim about two parties. The script refuses rather than trusting that the agent read the rule |
-| **The same-second collision guard** | **Measured on day one:** two messages written in the same call landed with the same second in their names, the second answering the first, and the ordering survived only because the slugs happened to sort in causal order. An agent that records a decision and then notifies the other writes two files back to back, so this is the common case rather than the edge one |
-| **`head:` carries its kind** | `sha:` where there is a repository, `clock:` where there is not. Read from the source, never typed |
-
-That last one is the reason the writer exists at all. **A generated field is read from its source,
-never typed from memory**, and a filename does not look like a claim, so it is the one place an
-asserted value passes unexamined. A message stamped five minutes ahead sorts in front of the answer
-that replies to it, and `ls -1` stops being ordered — which is the single property the whole design
-leans on.
-
-**UTC on both.** The two sessions run in different environments with no guarantee of a shared
-timezone, one in a container and one on the person's machine. Local time puts one session's
-messages hours away from the other's and inverts the ordering between the only two participants
-there are.
+None of that is worth restating here: the refusal names the flag and the reason. What is worth
+knowing is **why the refusals exist at all** — a guard that asks you to pick something fails
+loudly when you have not looked, where one that tries to detect fails silently on the message that
+does not resemble the pattern.
 
 ## Nothing here is ever reopened
 

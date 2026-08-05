@@ -65,12 +65,10 @@ and THE WRITER IS A SCRIPT. Call it, do not retype what it does:
     ## body in markdown
     EOF
 
-It reads the clock and the commit itself, refuses a bad vocabulary, refuses state: consensus
-without --re, and guards against two messages landing in the same second. A message stamped ahead
-of the real time sorts in front of the answer that replies to it, and then the directory is no
-longer ordered, which is the only property the design leans on. UTC.
+It refuses a bad vocabulary and guards the ordering. A message stamped ahead of the real time sorts in front of the answer that replies to it, and
+the directory stops being ordered -- the one property the design leans on. UTC.
 
-<channel>/message-template.md, next to the channel, says how to call it and what it enforces.
+<channel>/message-template.md says how to call it.
 
 NOTHING HERE IS EVER REOPENED. A correction is a NEW message answering the old one, never an edit.
 There is a deny rule behind that now, so an attempt to edit one refuses rather than succeeds
@@ -109,7 +107,7 @@ reason. Then the block's own first lines prove that message exists:
     echo "proposed in $PROP"
 
 On day one an agent cited a message it had never written, for a block containing rm inside the
-version-control directory, and it ran. Saying it is written up is not evidence that it is.
+version-control directory, and it ran.
 
 AND ANY QUESTION WITH DRAFTED OPTIONS GOES TO THE CHANNEL FIRST TOO, not just blocks. A block
 executes; a set of options you wrote is nothing but interpretation, and the one they pick becomes

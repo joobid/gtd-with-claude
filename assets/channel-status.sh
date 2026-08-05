@@ -325,63 +325,46 @@ fi
 #
 # The owner column is what makes this readable. Without it the report says "105 commits in
 # 8 branches" and the person has to ask which are theirs. Most are not.
+# What is stopped, DERIVED FROM THE CHANNEL. `blocks:` is prospective and per-question --
+# written while asking, meaning "if you do not answer, X stops". What the person asks is
+# retrospective and aggregate, and accumulation is not born of a question, so nobody writes
+# a `blocks:` for it. Measured: the field said zero live blocks while 7 of 9 `--decide`
+# messages had no reply anywhere down their chain.
+#
+# `blocks:` is not retired -- it covers the prospective case and covers it well.
+#
+# THE GIT HALF IS DELIBERATELY ABSENT. Uncommitted files, unmerged branches and open PRs
+# are the larger part of what is stopped on a real project, and they belong to the project
+# rather than here: `git-annex.md` opens by saying the method works without version
+# control, and a core script that reads git would make that false. A first version of this
+# did read git, and without a repository it printed two lines and stopped.
 if [ "$MODE" = blocked ]; then
-  echo "=== what is stopped, derived from git and the channel ==="
-  always=$(sed -n 's/^| *`\([^`]*\)` *| *always theirs.*/\1/p' "$PATHS" 2>/dev/null || true)
-  [ -n "$always" ] || always=$(sed -n '/always theirs/,/^$/p' "$PATHS" 2>/dev/null | grep -oE '`[^`]+`' | tr -d '`' || true)
-
-  # An empty path table is not "everything is delegable": it is a table nobody filled in,
-  # and attributing every file to the agent from it would be the blind state this method
-  # refuses everywhere else.
-  if [ -z "$always" ]; then
-    echo "  BLIND on ownership: no always-theirs paths found in $PATHS."
-    echo "  Counts below are real; the yours/agent's split is not. Fill the table first."
-  fi
-  n=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
-  mine=0; theirs=0
-  for f in $(git status --porcelain 2>/dev/null | awk '{print $NF}'); do
-    hit=no
-    for pat in $always; do
-      case "$f" in ${pat%\*\*}*) hit=yes ;; esac
-    done
-    if [ "$hit" = yes ]; then theirs=$((theirs + 1)); else mine=$((mine + 1)); fi
+  [ -d "$CHANNEL" ] || { echo "BLIND: $CHANNEL is not a directory. This is not a pass." >&2; exit 2; }
+  cd "$CHANNEL"
+  n=$(ls -1 2*.md 2>/dev/null | grep -c . || true)
+  [ "$n" -gt 0 ] || { echo "BLIND: no messages under $CHANNEL. This is not a pass." >&2; exit 2; }
+  nd=0
+  for f in $(grep -l '^decide:' 2*.md 2>/dev/null || true); do
+    grep -lq "^re: $f\$" 2*.md 2>/dev/null && continue
+    nd=$((nd + 1))
+    age=$(( ( $(date -u +%s) - $(date -u -d "$(echo "$f" | cut -c1-8) $(echo "$f" | cut -c10-11):$(echo "$f" | cut -c12-13)" +%s 2>/dev/null || date -u +%s) ) / 3600 ))
+    printf '  decide  %4sh  %s\n' "$age" "$f"
   done
-  old=$(git status --porcelain 2>/dev/null | awk '{print $NF}' | head -1)
-  echo "  uncommitted:        $n files   yours: $theirs   the agent's: $mine"
-  [ -n "$old" ] && echo "                      oldest tracked here: $old"
-
-  tot=0; wpr=0; wopr=0
-  for b in $(git branch --format='%(refname:short)' 2>/dev/null | grep -v '^main$'); do
-    c=$(git log --oneline "main..$b" 2>/dev/null | wc -l | tr -d ' ')
-    [ "$c" -gt 0 ] || continue
-    tot=$((tot + c))
-    if gh pr list --head "$b" --state open --json number 2>/dev/null | grep -q number; then
-      wpr=$((wpr + c)); echo "  branch YOURS        $b  $c commits  (PR open -- the merge is always yours)"
-    else
-      wopr=$((wopr + c)); echo "  branch agent's      $b  $c commits  (no PR -- in flight, not a decision)"
+  # The declared field, checked against reality rather than trusted. It fails both ways:
+  # it misses what nobody declared, and it holds what has already been resolved.
+  st=0
+  for f in $(grep -l '^blocks:' 2*.md 2>/dev/null || true); do
+    if grep -lq "^re: $f\$" 2*.md 2>/dev/null; then
+      st=$((st + 1))
+      printf '  stale   blocks: %s  (answered, and the field still says it blocks)\n' "$f"
     fi
   done
-  echo "  unmerged total:     $tot commits   yours: $wpr   the agent's: $wopr"
-
-  ( cd "$CHANNEL" 2>/dev/null || exit 0
-    nd=0
-    for f in $(grep -l '^decide:' 2*.md 2>/dev/null || true); do
-      grep -lq "^re: $f\$" 2*.md 2>/dev/null && continue
-      nd=$((nd + 1))
-      age=$(( ( $(date -u +%s) - $(date -u -d "$(echo "$f" | cut -c1-8) $(echo "$f" | cut -c10-11):$(echo "$f" | cut -c12-13)" +%s 2>/dev/null || date -u +%s) ) / 3600 ))
-      printf '  decide YOURS        %3sh  %s\n' "$age" "$f"
-    done
-    echo "  unanswered decides: $nd"
-    # And the declared field, checked against reality rather than trusted. It fails both
-    # ways: it misses what nobody declared, and it holds what has already been resolved.
-    for f in $(grep -l '^blocks:' 2*.md 2>/dev/null || true); do
-      grep -lq "^re: $f\$" 2*.md 2>/dev/null && \
-        printf '  stale blocks:       %s  (answered, and the field still says it blocks)\n' "$f"
-    done )
-
-  echo "EXAMINED: git status, git branch --no-merged, open PRs, and the channel's decides."
-  echo "NOT EXAMINED: whether the work in those branches is finished. This counts what is"
-  echo "  stopped, not what is ready."
+  parked=$(grep -lc '^parked:' 2*.md 2>/dev/null | wc -l | tr -d ' ')
+  echo "EXAMINED: $n messages. $nd decides unanswered, $st declared blocks already resolved,"
+  echo "  $parked parked."
+  echo "NOT EXAMINED: uncommitted files, unmerged branches, open PRs. Those are the larger"
+  echo "  part of what is stopped and they live in version control, which this method does"
+  echo "  not require. Derive them in the project."
   exit 0
 fi
 

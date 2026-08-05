@@ -366,91 +366,50 @@ method that claimed otherwise would be the phantom control it warns about, one l
 
 ## Every command block leaves a record
 
-This is the mechanism that converts an event into state, and it is what lets the reviewing agent
-work at all.
+This is what turns an event into state, and it is what lets the reviewing agent work at all.
 
-**Any block of commands writes its output to a file — whoever runs it.** Without exception, even a
-single line.
-
-The "whoever" is load-bearing. An implementing agent holds a shell and runs things itself; if the
-rule only covered blocks handed to a person, everything that agent did alone would leave no trace,
-and the reviewing agent would be correct to say *"no record here"* about most of the project. The
-frontier that makes review possible would close over the work being reviewed.
+**Any block of commands writes its output to a file — whoever runs it.** The "whoever" is
+load-bearing: a rule covering only blocks handed to a person would leave everything an agent did
+alone with no trace, and the reviewing agent would be right to say *"no record here"* about most
+of the project.
 
 ```
 <runs-directory>/YYYYMMDD-HHMMSS-<slug>.log
 ```
 
-Four rules about the content:
-
-1. **Capture both output streams.** Errors travel on the one nobody reads.
+1. **Capture both streams.** Errors travel on the one nobody reads.
 2. **Take the return code on the line after the command**, never inside a formatting call with a
-   substitution in it — the substitution runs first and you capture its code instead.
-3. **The header declares what it ran against** — the version, the branch, whatever identifies the
-   state. A record that does not say what it ran against cannot be judged still valid, and a
-   figure measured before the project moved looks exactly like a current one.
-4. **The block prints its own log path, and the agent that wrote the block reads it.** Nobody hands
-   output to anybody. Asking a person to paste results back makes them the transport again, which
-   is the failure this method opens by naming — and **what travels through a chat is altered by
-   it**: a commit body pasted between sessions can lose the blank line between subject and body,
-   with neither end able to tell.
+   substitution — the substitution runs first and you capture its code.
+3. **The header declares what it ran against.** A figure measured before the project moved looks
+   exactly like a current one.
+4. **The block prints its own log path, and whoever wrote the block reads it.** Asking a person to
+   paste results back makes them the transport again — and **what travels through a chat is altered
+   by it**: four lines of a commit body arrived cut mid-word at exactly 66 characters, and the
+   sentences that went missing were the ones saying what a privacy control does **not** cover.
 
-   **And the damage is not always that mild.** In one commit body, four lines arrive cut
-   mid-word at exactly 66 characters, each losing the end of a sentence — and the sentences that
-   went missing are the ones stating what the privacy control **does not** cover. The commit still
-   reads as prose, so nothing looks wrong: it says less than it was written to say, confidently.
+   The cause is not established, and that is said rather than guessed: nine lines longer than 66
+   survived intact, up to 76, which refutes the obvious fixed-width explanation. *Measured in four
+   lines, cause unknown.*
 
-   **The mechanism is not established, and saying so is the point.** The obvious explanation, a
-   fixed-width transport, does not survive its own evidence: **nine lines longer than 66 survived
-   intact, up to 76 characters**, and a 66-column limit would have cut every one of them. Four
-   mid-word cuts landing on the same column is not chance either. So: *measured in four lines,
-   cause unknown.* Naming a cause here would be the fourth time in this project that a plausible
-   mechanism got written down as a finding.
+   **It runs both ways.** Never hand the person a message to relay, and never a pointer to one
+   instead of the thing. What must land byte-exact goes in a file written by the agent's own tools
+   **outside** the block — `git commit -F`, `gh pr create --body-file`. A heredoc inside the pasted
+   block puts the same text back through the same path.
 
-   **What follows does not depend on knowing the cause.** Text that must land byte-exact should
-   not travel inside a block a person copies, because there is a form that costs nothing and
-   removes the whole class:
-
-   ```sh
-   git commit -F <file>
-   gh pr create --body-file <file>
-   ```
-
-   **The file has to be written by the agent's own file tools, outside the block.** Building it
-   with a heredoc *inside* the pasted block puts the same text back through the same path and
-   buys nothing — the fix would be a placebo. Where an agent has no way to write a file directly,
-   this rule does not apply and the honest thing is to say so rather than perform it.
-
-   This one is prose, not a mechanism, and it is worth naming why: the act leaves **no artefact
-   to check**. Nothing on disk distinguishes a body that went through a clipboard from one that
-   did not. It is accepted anyway, because the measured alternative is continuing to lose bytes
-   out of the sentences that say what a control misses.
-
-   **It runs both ways**, and only one direction was written down. A summary handed to the person
-   to carry **forward** is the one an agent produces while being helpful: measured, a reviewing
-   agent handed over a block summarising a message already sitting complete in the channel. **Never
-   hand the person a message to relay.** The tell is that the summary looks *useful* — shorter,
-   shaped to what they want — which is exactly what makes it a second lossy copy.
-
-   **Two exceptions, both where no log exists to read**: an install verdict and a permission rule's
-   refusal happen outside the project and come back once, in an interface. Those get pasted
-   verbatim onto a line the block left blank — see §12.
+   **Two exceptions, both where no log exists to read**: an install verdict and a permission
+   refusal happen outside the project and come back once, in an interface.
 
 And one rule about the directory, corrected by measurement after being written the other way round.
-It was *"raw output by design; nothing scans it, and what protects it is that it does not leave."*
-**That is false, and it hid a live exposure.** A third party's name and national ID were removed
-from the tracked tree by a commit that turned the barrier green — and stayed intact in the channel
-message reporting the fix, because the run directory is gitignored and the project's scanner had
-therefore never looked at it. **Outside version control is not outside disk.** Talking about a value
-copies it here; removing it from the tree does not remove it from here.
+It said *"nothing scans it, and what protects it is that it does not leave."* **False, and it hid a
+live exposure**: a third party's name and national ID were removed from the tracked tree by a commit
+that turned the barrier green, and stayed intact in the message reporting the fix, because the run
+directory is gitignored. **Outside version control is not outside disk.**
 
 ```sh
 channel-status.sh --audit <runs dir>
 ```
 
-**And it opens a conflict this method has to state rather than inherit.** A channel message is never
-edited — a correction is a new file. The first floor class says the damage is not undone by
-reverting. On this one file the two rules contradict each other, so **class 1 is the single
-exception to immutability**: redact the value in place, leave an immutable mark saying what was
-redacted and why, and never remove the message. Without the exception the protocol requires keeping
-what the floor forbids keeping.
+**And it opens a conflict this method states rather than inherits.** A channel message is never
+edited; the first floor class says the damage is not undone by reverting. On that one file the two
+rules contradict, so **class 1 is the single exception to immutability**: redact in place, leave an
+immutable mark of what and why, never remove the message.
