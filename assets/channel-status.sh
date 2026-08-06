@@ -58,6 +58,7 @@ while [ $# -gt 0 ]; do
     --fyi)     MODE=fyi;   shift ;;
     --delegation) MODE=deleg; shift ;;
     --blocked) MODE=blocked; shift ;;
+    --balance) MODE=balance; shift ;;
     --paths)   PATHS="$2"; shift 2 ;;
     -h|--help) sed -n '3,38p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "channel-status: unknown argument: $1" >&2; exit 2 ;;
@@ -288,6 +289,42 @@ if [ -n "$SELFTEST" ]; then
          "$(printf 'x: dev@mail.example.org\n' > "$probe/run2.log"; \
             bash "$0" --channel "$probe" --audit "$probe" 2>&1 || true)" "NEW: *1"
 
+  # --- 0.8.0: the acknowledgement, and broadcast told apart from addressed ---
+  # The fixture already has 000001 addressed to code and 000007 broadcast to both, so
+  # both assertions run against messages that were there before this round.
+  assert "says how many of the queue are broadcast rather than addressed (M25)" \
+         "$out" "addressed, .*broadcast to both"
+
+  # An ack by code must take it out of code's queue AND leave it in cowork's. Testing
+  # only the first half would pass on an implementation that dropped the message for
+  # everyone, which is the version of this feature worth refusing.
+  #
+  # E has to be `to: both`, and the first version of this used thread A, which is
+  # `to: code`. It was therefore never in cowork's queue, and the second assertion went
+  # red -- correctly, against a fixture that could not express the defect. Same shape as
+  # the A-20 note above: an assertion is only worth what its fixture can show.
+  w 20260101-000011-cowork-e-note  cowork both -                                 open      "broadcast to both"
+  printf -- '---\nfrom: code\nto: cowork\nre: -\nstate: open\nack: 20260101-000011-cowork-e-note.md\nhead: clock:x\n---\n\n## read it\n' \
+    > "$probe/20260101-000012-code-ack.md"
+  assert "a broadcast message is in the other agent's queue to begin with" \
+         "$(bash "$0" --channel "$probe" --me cowork 2>&1 || true)" "000011-cowork-e-note"
+  acked_out=$(bash "$0" --channel "$probe" --me code 2>&1) || true
+  checks=$((checks + 1))
+  if printf '%s' "$acked_out" | grep -q '000011-cowork-e-note'; then
+    printf '  FAIL  an ack takes the message out of the acknowledging side queue\n'; fails=$((fails + 1))
+  else
+    printf '  ok    an ack takes the message out of the acknowledging side queue\n'
+  fi
+  assert "and leaves it in the other side's, because the queue is per agent" \
+         "$(bash "$0" --channel "$probe" --me cowork 2>&1 || true)" "000011-cowork-e-note"
+  rm -f "$probe/20260101-000011-cowork-e-note.md" "$probe/20260101-000012-code-ack.md"
+
+  # The method's half of the smell test. Over a fixture dated 2026-01-01 today's count is
+  # zero, and zero is the correct answer -- what is asserted is that it names the half it
+  # did not examine, which is the property that keeps it honest.
+  assert "--balance names the half it cannot see (M30)" \
+         "$(bash "$0" --channel "$probe" --me code --balance 2>&1 || true)" "NOT EXAMINED"
+
   # And the failure mode that matters more than any hit: nothing to look at must not
   # read as nothing to find.
   empty="${TMPDIR:-/tmp}/cs-empty-$$"; mkdir -p "$empty"
@@ -368,6 +405,40 @@ if [ "$MODE" = blocked ]; then
   exit 0
 fi
 
+# The smell test, which was stated and never derived. `SKILL.md` says that if the
+# method's artefacts outnumber the project's at the close of a session, the method ate the
+# session -- both halves are countable and neither was counted, so the test fired only when
+# an agent happened to re-read the file that states it. Measured on the day that happened:
+# 27 channel messages, 2 project files touched, and the day's first-in-order work never
+# started.
+#
+# ONLY THE METHOD'S HALF IS DERIVED HERE, and that is the whole design. The project's
+# artefacts live in version control, which this method does not require -- `git-annex.md`
+# opens by saying so, and a core script reading git would make it false. The half nobody
+# had is this one: how many messages did I write today. The other is one command in the
+# project, and it is named rather than guessed at.
+#
+# It is a warning and not a verdict. A full day of review legitimately produces many
+# messages and no files -- SKILL.md says so two paragraphs above the test itself -- and no
+# count can tell that apart from a session that ate itself. What it does is put the
+# question in front of you instead of waiting for you to remember the rule.
+if [ "$MODE" = balance ]; then
+  [ -d "$CHANNEL" ] || { echo "BLIND: $CHANNEL is not a directory. This is not a pass." >&2; exit 2; }
+  today=$(date -u +%Y%m%d)
+  # Authorship, not `from:`. A message recorded with `--record` carries `from: owner` and
+  # was still typed by this agent, so it is one of its artefacts. The author is only in
+  # the filename, which is the same match the queue's own split uses.
+  mine=$(ls -1 "$CHANNEL/$today"-*"-$ME-"*.md 2>/dev/null | grep -c . || true)
+  all=$(ls -1 "$CHANNEL/$today"-*.md 2>/dev/null | grep -c . || true)
+  echo "EXAMINED: $CHANNEL for $today. $mine message(s) written by you, $all on the channel."
+  echo "NOT EXAMINED: what the project gained today. That is the other half of the test and"
+  echo "  it lives in version control, which this method does not require. Count it there."
+  echo "THE TEST: if the method's artefacts outnumber the project's, the method ate the"
+  echo "  session. It is a warning, not a verdict -- a day of review is many messages and"
+  echo "  no files, and no count tells that apart from a session that ate itself."
+  exit 0
+fi
+
 if [ "$MODE" = deleg ]; then
   [ -d "$CHANNEL" ] || { echo "BLIND: $CHANNEL is not a directory. This is not a pass." >&2; exit 2; }
   acc=$(cd "$CHANNEL" && grep -lE '^delegation: +accepted$' 2*.md 2>/dev/null | tail -1 || true)
@@ -442,11 +513,33 @@ done
 # for dropping anything out of a queue -- a log with no way to read it is not a control.
 # Measured before the guard existed: 13 items waiting on the person, none of them
 # carrying an executable block, and the headings were minutes rather than requests.
+#
+# `fyi: true` is NOT the class to exclude for an agent, and the difference cost a real
+# proposal. Measured over one channel: of 74 messages carrying the person's decisions,
+# **19 were marked `fyi: true`** -- so excluding `fyi` from the agents' queues removes
+# nineteen decisions by the person, one of them a morning instruction requiring an agent
+# to act. The flag says *I am not asking the person anything*. What a queue needs is
+# *nobody has to act*. One flag, two statements, and no line of shell separates them.
+#
+# So nothing is excluded for being an FYI here. What takes an item out of an agent's
+# queue is that agent having said it read it -- see `ack:` below.
+acked=""
+for a in $(grep -lE "^from: +$ME\$" 2*.md 2>/dev/null || true); do
+  acked="$acked$(sed -n 's/^ack: *//p' "$a" | head -1 | tr ' ' '\n')"$'\n'
+done
+
 waiting=""
+bcast=0
 for f in $(grep -lE "^to: +($ME|both)\$" 2*.md 2>/dev/null || true); do
   if grep -qE '^state: +settled$' "$f"; then continue; fi
   if printf '%s' "$closed" | grep -qx "$f"; then continue; fi
   if [ "$ME" = owner ] && grep -qE '^fyi: +true$' "$f"; then continue; fi
+  # The ack is a claim and not an observation: an agent can acknowledge thirty files
+  # without opening one. It is not verifiable when written and it is citable when it
+  # fails, which is the same bargain `head:` makes. Authorship is read from `from:`
+  # rather than from the filename, because a slug may contain the other agent's name.
+  if printf '%s' "$acked" | grep -qx "$f"; then continue; fi
+  grep -qE "^to: +both\$" "$f" && bcast=$((bcast + 1))
   waiting="$waiting$f"$'\n'
 done
 
@@ -459,7 +552,12 @@ n=$(printf '%s' "$waiting" | grep -c . || true)
 # stop after the first heading. The author is only in the filename; the front matter does
 # not record it, which is why this matches on `-$ME-` rather than on a field.
 body=$( {
-  echo "CHANNEL: $n message(s) addressed to you that nothing has closed."
+  # `to: both` means BROADCAST and this line used to call all of it "addressed to you",
+  # because `^to: +($ME|both)$` is one pattern and reads as one thing. A record left for
+  # whoever comes next and a message to somebody are different objects, and merging them
+  # is what made an agent propose dropping the whole class. Counted, not dropped: the
+  # column below says which each one is, and nothing leaves the queue for being broadcast.
+  echo "CHANNEL: $n open to you -- $((n - bcast)) addressed, $bcast broadcast to both."
   printf '%s' "$waiting" | grep -v -- "-$ME-" > "${TMPDIR:-/tmp}/cs-other-$$" || true
   printf '%s' "$waiting" | grep -- "-$ME-" > "${TMPDIR:-/tmp}/cs-mine-$$" || true
   for part in other mine; do
@@ -474,12 +572,15 @@ body=$( {
     # being the same object the moment they are seen next to each other. No new field:
     # the timestamp is already in the filename.
     age=$(( ( $(date -u +%s) - $(date -u -d "$(echo "$f" | cut -c1-8) $(echo "$f" | cut -c10-11):$(echo "$f" | cut -c12-13)" +%s 2>/dev/null || date -u +%s) ) / 3600 ))
-    printf '  %-10s %3sh  %s/%s\n' "$st" "$age" "$CHANNEL" "$f"
+    reach=to-you; grep -qE "^to: +both\$" "$f" && reach=broadcast
+    printf '  %-10s %3sh  %-9s %s/%s\n' "$st" "$age" "$reach" "$CHANNEL" "$f"
   done < "$fl"
   done
   rm -f "${TMPDIR:-/tmp}/cs-other-$$" "${TMPDIR:-/tmp}/cs-mine-$$"
   echo "An open one needs an answer. A consensus one is agreed and not yet done: do it, or"
   echo "close it with a settled whose re: names this file. Only settled closes anything."
+  echo "A broadcast one may need nothing: --ack '<file> <file>' takes it out of YOUR queue"
+  echo "and leaves it in the other agent's. Acknowledging is not closing."
 } )
 
 if [ "$JSON" -eq 1 ]; then

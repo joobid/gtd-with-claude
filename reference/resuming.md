@@ -63,7 +63,19 @@ real answer, not a failure.
 |---|---|
 | Every message the derivation named | This is the outstanding work. Non-negotiable |
 | The direct parent of each, where it has one | A pending message is an answer; its parent is the question. One hop |
+| A grep of the channel for the subject of anything you are about to call new | The list is flat, and two of its entries can be the same thread with no `re:` between them |
 | Nothing else | |
+
+**A message tells you what was true when it was written.** The present state comes from the
+artefact. **Before resting a decision on a measurement you read in a message, re-run it** —
+`verification.md` §10 carries what skipping that cost, three times in one morning.
+
+**The flat list is why the grep row is there.** Two messages sat in one session's derivation, forty
+lines apart in different sections, one asking a question and the other answering it. Both carried
+`re: -`, so the one-hop rule joined nothing — neither had a parent to climb to. The agent read the
+question, reproduced a finding already on file, and the reproduction left scratch files behind. A
+grep for the subject returns both, in order: a targeted read driven by a question you already have,
+the same shape as step 6. It does not cover a subject the two messages name differently.
 
 **One hop, not the chain.** Measured on that same channel, from the implementing side:
 
@@ -86,8 +98,7 @@ instruction wearing sensible clothes.
 So the decisions are not *read* on arrival — but their **index** is, and you do not have to ask
 for it. `gtd-msg.sh` prints it whenever you write to the person, and `--decisions` prints it on
 demand: one line per decision, filename and heading, never bodies. That is the difference between
-a level-1 mechanism and a rule. The rule was there, and it was obeyed **23 seconds too late** —
-the gap was published, and the person's answer had been on the channel for nine minutes.
+a level-1 mechanism and a rule, and `protocol.md` carries what the rule alone cost.
 
 ### 4 · When one hop is not enough, that is a finding
 
@@ -110,10 +121,8 @@ Write **one** message to the channel, `to: owner`, `state: open`, containing:
 - what you understand the outstanding work to be, in your own words
 - **what you did not read, and what you could not reconstruct**
 - **whether anything needs the person** — and say so plainly when nothing does. The writer
-  refuses a message reaching them that does not declare which it is: `--decide "<the choice>"`
-  with `--blocks "<what stops until they answer>"`, or `--fyi`. If you cannot name what stops,
-  it is not a decision. Measured before that guard existed: 13 items in the person's queue,
-  **none of them carrying anything to act on**
+  refuses a message reaching them that does not declare which it is, and names the flag in its
+  own refusal
 - what you intend to do next
 
 Then wait for it to be seen before starting work that depends on it.

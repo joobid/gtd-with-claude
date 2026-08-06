@@ -68,6 +68,14 @@ and THE WRITER IS A SCRIPT. Call it, do not retype what it does:
 It refuses a bad vocabulary and guards the ordering. A message stamped ahead of the real time sorts in front of the answer that replies to it, and
 the directory stops being ordered -- the one property the design leans on. UTC.
 
+THE MANDATORY FLAGS LIVE ONLY IN THE WRITER, so without the skill installed you learn them by being
+refused. --closes "<text quoted from the message it closes>" on state settled. --lands-in <path> on
+state consensus. --decide, --fyi or --record on anything reaching the person.
+
+--ack "<file> <file>" is not mandatory and is the ONLY thing that takes a broadcast message out of
+your queue; it leaves the other agent's alone, and it is refused on a settled because acknowledging
+is not closing.
+
 <channel>/message-template.md says how to call it.
 
 NOTHING HERE IS EVER REOPENED. A correction is a NEW message answering the old one, never an edit.
