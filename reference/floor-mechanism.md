@@ -134,6 +134,10 @@ attempts failed on presentation alone before either reached a result:
 - **One at a time**, with what to bring back: verbatim text, and which of the three outcomes.
 - **The undo comes last, never alongside.** A restore shown beside the setup gets run first.
 
+The requests are the exception here, not the rule: they are *sentences*, so they cannot be a
+script. Everything else you hand over can be, and `verification.md` §14 says why it should —
+a pasted block loses its last line, and the last line is where the check is.
+
 ### Step 4 · Write the log, and write it so an unfinished verification looks unfinished
 
 **The log is owed whatever happened**, including "no permission system here, nothing written".

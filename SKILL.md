@@ -2,7 +2,7 @@
 name: gtd-with-agents
 description: Set up and run the three-party working method for a project driven by Claude Code and Claude Cowork together — a file-based channel the two agents use to talk to each other, an explicit delegation contract that records what the person decides and what they hand over, and the verification culture that makes agreement between two agents worth anything. Use this whenever someone is starting a project with both Claude Code and Cowork, asks how the two should coordinate, says they are tired of copying questions from one session and pasting answers into the other, asks "who decides what here", "how do I stay informed without approving everything", "how much can I delegate", or wants to install a working agreement, an exchange channel, or an approval policy between agents. Also use when a session arrives cold at a project that already has this method installed and needs to pick it up.
 metadata:
-  version: 0.8.0
+  version: 0.9.0
 ---
 
 # Get Things Done with Claude
@@ -266,6 +266,40 @@ Then record it in the configuration, including what it does **not** do: it fires
 types, so a message written mid-milestone surfaces at the next turn rather than immediately, and
 it covers **one side only** unless the reviewing agent's tool offers an equivalent. `protocol.md`
 has the reasoning; the configuration has the row.
+
+### Step 4c · When the skill is upgraded, the deployed copies do not move
+
+**Upgrading the skill upgrades the documentation both agents read and touches nothing
+either of them runs.** Step 4 copies the writer and the derivation *out* of the skill tree
+on purpose, because the implementing tool cannot read the reviewing tool's plugin cache —
+and that copy is what executes for ever after.
+
+Measured the first time it happened: a skill upgraded to 0.8.0 left both executables
+**byte-for-byte identical to the previous release's assets** — not drifted, never
+redeployed. The install log carried the evidence on the same page and nobody read it as
+one: 18 assertions in the asset's selftest, 13 in the deployed one. A session resuming
+against the new documentation reads about flags its machine does not have, and has no
+reason to doubt it, because the *skill* really is the new version.
+
+```sh
+<path>/channel-status.sh --version
+<path>/gtd-msg.sh --version
+```
+
+Both report a constant they carry. The derivation additionally compares its own hash
+against the installed asset and prints one `DRIFT:` line if they differ — **it fails open**,
+staying silent when it cannot find an asset to compare against, because in Cowork the skill
+lives under a regenerated temporary path and a checker that shouted there would be switched
+off within a week.
+
+**Redeploy both files or neither.** `ack:` is written by the writer and read by the
+derivation; half a pair leaves a derivation looking for a header nothing produces. Copy the
+previous versions aside first — this is a replacement, and the run directory is where the
+old one goes.
+
+**Neither mechanism deploys anything, and that is correct.** `.claude/**` is the person's
+row in every configuration this method writes, so redeployment waits for their turn. What
+these remove is the *silence*, not the step.
 
 ### Step 5 · Write the configuration
 

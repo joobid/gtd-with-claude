@@ -140,6 +140,42 @@ needed: the timestamp is in the filename and the derivation already orders by it
 
 ---
 
+## A sandbox that can create files and not remove them cannot clean up after itself
+
+Measured across a mounted project, from the reviewing side: `touch` succeeds, `mv`
+succeeds, and `rm` and `find -delete` both return *Operation not permitted* — **anywhere
+under the mount**, and normally outside it.
+
+```
+touch <project>/.runs/zz-probe          ok
+rm -f <project>/.runs/zz-probe          Operation not permitted, the file survives
+mkdir <project>/.claude/skills/zz-dir   ok
+rmdir <project>/.claude/skills/zz-dir   Operation not permitted
+touch /tmp/zz && rm -f /tmp/zz          ok
+```
+
+**It was found twice as something narrower and both readings were wrong** — first as a
+property of `.git/index.lock`, then of `.git`. It is neither, and the correction matters
+here rather than in the annex: one of the probes above is under `.claude/skills/`, which
+has nothing to do with version control. This is not a git fact. It is a limit on what an
+unattended session can do anywhere.
+
+So an unattended reviewing run **needs a person to finish tidying**, which is the thing
+unattended operation exists to avoid. Three consequences:
+
+- **Every stray file it creates outlives it.** A probe, a scratch copy, a temporary
+  fixture. Prefer `/tmp`, which is outside the mount and behaves normally.
+- **`git worktree add` from that side leaves a permanent orphan registry** that
+  `git worktree prune` will not remove, because it stays locked. Clone to `/tmp` with
+  `--no-local` instead. `git-annex.md` carries the version-control detail.
+- **A git command that takes a lock and exits still leaves the lock**, silently, because
+  it exited 0. The dangerous shape is a lock that makes a later command *look* done: one
+  cost a whole prepared block that appeared to execute.
+
+**And note what it costs to establish any of this.** Probing an unlink restriction is a
+create-then-delete in the exact place delete is known to fail, so the probe leaves behind
+what it is measuring. Read the log of a previous probe before running a new one.
+
 ## What the skill cannot ship
 
 **The scheduling.** It is a host capability and it differs between the two sides. Everything here is

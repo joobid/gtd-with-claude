@@ -109,26 +109,26 @@ The two settings files are not the same object either, and one line saves an arg
 - **`.claude/settings.local.json` is not.** It carries one machine's absolute paths and one
   person's accumulated approvals, and neither travels.
 
-## A reviewing sandbox may be able to create files and not to remove them
+## What a reviewing sandbox leaves in `.git`
 
-Measured across a mounted project: `touch` succeeds, `mv` succeeds, and `rm` and `find -delete`
-both return *Operation not permitted* — anywhere under the mount, and normally outside it. It was
-first found as a property of `.git/index.lock`, then generalised to `.git`. It is neither: it is the
-mount.
+The general fact belongs to `unattended.md`: on a mounted project that sandbox can create and
+rename and **cannot unlink**, anywhere under the mount. What is version control's business is what
+that does to a repository.
 
-Three consequences belong to the method rather than to any project.
+- **A read-only git command is enough to leave a lock.** It takes `.git/index.lock`, finishes,
+  fails to remove it, and still exits 0. The next `git add` or `git commit` then refuses while
+  `git status` and `git push` keep working — so a prepared block runs half way and reads as done.
+  Measured: exactly that cost a whole block, and later a release whose commit never happened while
+  its branch pushed cleanly.
+- **`git worktree add` leaves a permanent orphan registry**, which `git worktree prune` will not
+  remove because it stays locked.
+- **A commit can leave `HEAD.lock` and stray `tmp_obj_*`**, and `HEAD.lock` blocks everything that
+  moves HEAD afterwards — including the tag.
 
-- **An unattended reviewing session cannot clean up after itself.** Every stray file needs the
-  person, which is the thing unattended operation exists to avoid.
-- **`git worktree add` from that side leaves a permanent orphan registry**, which `git worktree
-  prune` will not remove because it stays locked.
-- **The shape that works is cloning to `/tmp` with `--no-local`.**
-
-So: **no `git worktree add`, and no scratch files under the mounted repository, from the reviewing
-side.** Note what it costs to establish this — probing it is a create-then-delete in the place
-delete is known to fail, so the probe leaves behind exactly what it is measuring. Confirming it for
-this document left a zero-byte file the person had to remove, in the repository that ships this
-paragraph.
+So: **no `git worktree add` and no scratch files under the mounted repository from that side.**
+Clone to `/tmp` with `--no-local`, which works. And when a block must run against the repository,
+have it clear an orphaned lock as its first step, after checking `pgrep git` — a lock with a live
+process behind it is a different fact and must not be deleted.
 
 ## Reviewing agent permissions
 

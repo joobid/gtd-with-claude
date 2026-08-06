@@ -29,7 +29,16 @@ set -euo pipefail
 
 AUTHOR=""; FROM=""; TO=""; RE="-"; STATE="open"; SLUG=""; SELFTEST=""
 CLOSES=""; LANDS_IN=""; DECISIONS=""; DECIDE=""; BLOCKS=""; FYI=""; RECORD=""; ACK=""
+ACTION=""
 CHANNEL="${GTD_CHANNEL:-.runs/exchange}"
+
+# The version this file IS, as a constant rather than a comment. A deployed copy lives
+# outside the skill tree by design -- the implementing tool cannot see the reviewing
+# tool's plugin cache -- and until this line existed there was no way to ask a running
+# script which release it came from. Measured the day it was missing: a skill upgraded to
+# 0.8.0 left both executables byte-for-byte at 0.7.0, and the agents read documentation
+# for two flags their machine did not have.
+GTD_VERSION="0.9.0"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -46,6 +55,8 @@ while [ $# -gt 0 ]; do
     --fyi)     FYI=1;        shift ;;
     --record)  RECORD=1;     shift ;;
     --ack)     ACK="$2";     shift 2 ;;
+    --action)  ACTION="$2";  shift 2 ;;
+    --version) echo "gtd-msg.sh $GTD_VERSION"; exit 0 ;;
     --channel) CHANNEL="$2"; shift 2 ;;
     --decisions) DECISIONS=1; shift ;;
     --selftest) SELFTEST=1; shift ;;
@@ -239,7 +250,7 @@ EOF
   # probe channel, so there is something to find; on an empty one this asserts nothing.
   LABEL="--decisions lists what the person has decided"
   bash "$0" --channel "$probe" --author cowork --from owner --to both --state open \
-            --slug a-decision --fyi <<'EOF' >/dev/null 2>&1
+            --slug a-decision --fyi --action none <<'EOF' >/dev/null 2>&1
 ## ASKED / ANSWERED
 they decided
 EOF
@@ -260,7 +271,7 @@ EOF
   LABEL="writing to the person puts those decisions in front first (A-09)"
   checks=$((checks + 1))
   bash "$0" --channel "$probe" --author code --from code --to owner --state open \
-            --slug gap --fyi >/dev/null 2>"$probe/.a09.err" <<'EOF'
+            --slug gap --fyi --action none >/dev/null 2>"$probe/.a09.err" <<'EOF'
 ## a gap
 EOF
   if grep -q 'already decided' "$probe/.a09.err" 2>/dev/null; then
@@ -321,7 +332,7 @@ EOF
   refuses --author cowork --from cowork --to both --slug b9c
 
   LABEL="accepts --fyi, which stays out of their queue"
-  accepts --author cowork --from cowork --to owner --slug b9d --fyi <<'EOF'
+  accepts --author cowork --from cowork --to owner --slug b9d --fyi --action none <<'EOF'
 ## nothing here needs you
 EOF
 
@@ -373,6 +384,66 @@ EOF
     printf '  FAIL  %s\n' "$LABEL"; fails=$((fails + 1))
   fi
 
+  # --- 0.9.0: fyi and action are two statements ---------------------------
+  LABEL="refuses --fyi without --action: one flag carried two statements"; SAYING="--action none"
+  refuses --author cowork --from cowork --to owner --slug f1 --fyi
+
+  LABEL="refuses an --action value that is not a role or none"; SAYING="must be none, code"
+  refuses --author cowork --from cowork --to cowork --slug f2 --action nobody
+
+  LABEL="accepts --fyi --action none, and records action in the front matter"
+  checks=$((checks + 1))
+  # stderr is NOT captured here. Writing to the person makes the writer print the
+  # decision index on stderr, and folding it into the variable turns a path into a
+  # paragraph -- so `[ -f "$actout" ]` fails and the assertion reports the wrong defect.
+  actout=$(bash "$0" --channel "$probe" --author cowork --from cowork --to owner \
+                     --slug f3 --fyi --action none 2>/dev/null <<'EOF'
+## nothing here needs anyone
+EOF
+  ) || true
+  if [ -f "$actout" ] && grep -qx "action: none" "$actout" && grep -qx "fyi: true" "$actout"; then
+    printf '  ok    %s\n' "$LABEL"
+  else
+    printf '  FAIL  %s\n' "$LABEL"; fails=$((fails + 1))
+  fi
+
+  # The distinction the whole field exists for: an FYI that still needs somebody. A
+  # fixture without this case cannot show the defect -- the same lesson the ack fixture
+  # taught one release earlier.
+  LABEL="accepts --fyi --action code: not asking the person, and somebody still acts"
+  accepts --author cowork --from cowork --to both --slug f4 --fyi --action code <<'EOF'
+## not for you, but code has to move
+EOF
+
+  LABEL="--decide implies action: owner without being asked for it"
+  checks=$((checks + 1))
+  decout=$(bash "$0" --channel "$probe" --author cowork --from cowork --to owner \
+                     --slug f5 --decide "A or B" --blocks "the tranche" 2>/dev/null <<'EOF'
+## What you have to do
+Pick A or B.
+## The options and what each costs
+A costs one day. B costs two.
+## What stops if you do not answer
+The tranche.
+## Where the evidence is
+.runs/20260101-000000-probe.log
+EOF
+  ) || true
+  if [ -f "$decout" ] && grep -qx "action: owner" "$decout"; then
+    printf '  ok    %s\n' "$LABEL"
+  else
+    printf '  FAIL  %s\n' "$LABEL"; fails=$((fails + 1))
+  fi
+
+  LABEL="--version reports the constant this file carries"
+  checks=$((checks + 1))
+  if [ "$(bash "$0" --version 2>&1)" = "gtd-msg.sh $GTD_VERSION" ]; then
+    printf '  ok    %s\n' "$LABEL"
+  else
+    printf '  FAIL  %s\n' "$LABEL"; fails=$((fails + 1))
+  fi
+
+  printf 'VERSION: %s\n' "$GTD_VERSION"
   printf 'EXAMINED: %d checks, exercising the shipped writer against %s\n' "$checks" "$probe"
   # Said rather than implied. The tty guard is real and one line long, and the obvious
   # way to assert it -- run the writer under `script` with a fake terminal -- hangs the
@@ -510,6 +581,48 @@ if [ "$TO" = "owner" ] || [ "$TO" = "both" ]; then
     exit 2
   fi
 fi
+
+# ---------------------------------------------------------------------------
+# --action: the second half of what `fyi:` was carrying on its own.
+#
+# `fyi: true` says *I am not asking the person anything*. A queue needs *nobody has to
+# act*. Those are different statements and one flag carried both, so no query separated
+# them cleanly and the obvious filter was wrong in a way that cost a real proposal:
+# measured over one channel, of 74 messages carrying the person's decisions **19 were
+# marked `fyi: true`**, so excluding `fyi` from the agents' queues would have removed
+# nineteen decisions by the person -- one of them a morning instruction requiring an agent
+# to act.
+#
+# So `fyi:` keeps its own meaning and stops standing in for the other one. `action:` says
+# who has to do something: `none`, or a role.
+#
+# REQUIRED WITH --fyi AND NOWHERE ELSE. That is where the overload lived, and a flag made
+# mandatory everywhere would be answered at minimum cost -- the level-2 failure this
+# writer already has a note about. Everywhere else `action:` is absent, and absent is
+# honest: nobody stated it.
+#
+# IT LABELS AND IT DOES NOT FILTER. `action: none` does not remove anything from anyone's
+# queue. Dropping messages for declaring themselves actionless rebuilds the exact silent
+# hole this field exists to expose -- the writer declares, the reader decides, and `--ack`
+# stays the only thing that empties a queue. Same choice `to: both` got: counted and
+# labelled, never dropped.
+# ---------------------------------------------------------------------------
+if [ -n "$ACTION" ]; then
+  case "$ACTION" in
+    none|code|cowork|owner) ;;
+    *) echo "gtd-msg: --action must be none, code, cowork or owner -- got '$ACTION'." >&2; exit 2 ;;
+  esac
+fi
+if [ -n "$FYI" ] && [ -z "$ACTION" ]; then
+  echo "gtd-msg: --fyi says you are not asking the person anything." >&2
+  echo "  It does not say whether anyone has to act. Add --action none, or --action <role>." >&2
+  echo "  Those were one flag until 0.9.0, and the queue could not tell them apart." >&2
+  exit 2
+fi
+# `--decide` names the person as the actor by construction: it is a choice only they can
+# make. Derived rather than asked for, because a flag whose only correct answer is known
+# is a question with one answer.
+if [ -n "$DECIDE" ] && [ -z "$ACTION" ]; then ACTION=owner; fi
 
 # ---------------------------------------------------------------------------
 # --ack: the only thing that takes a broadcast out of an agent's queue.
@@ -702,6 +815,7 @@ MSG="$CHANNEL/$TS-$AUTHOR-$SLUG.md"
   if [ -n "$FYI" ]; then echo "fyi: true"; fi
   if [ -n "$RECORD" ]; then echo "record: true"; fi
   if [ -n "$ACK" ]; then echo "ack: $ACK"; fi
+  if [ -n "$ACTION" ]; then echo "action: $ACTION"; fi
   echo "head: $HEAD"
   echo "---"
   echo

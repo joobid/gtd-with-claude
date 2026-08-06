@@ -387,11 +387,29 @@ them is what made an agent propose dropping the whole class.
 Nothing leaves the queue for being broadcast. The derivation counts it and labels the row, because
 the defect was the misrepresentation, not the volume.
 
-**And `fyi: true` is not the class to exclude either, which cost a real proposal.** The flag says
-*I am not asking the person anything*. A queue needs *nobody has to act*. Two statements, one flag.
-Measured: of 74 messages carrying the person's decisions, **19 were marked `fyi: true`**, so
-excluding `fyi` from the agents' queues removes nineteen decisions by the person — one of them a
-morning instruction requiring an agent to act.
+### `fyi:` and `action:` are two statements, and they were one flag until 0.9.0
+
+`fyi: true` says *I am not asking the person anything*. A queue needs *nobody has to act*. One flag
+carried both, so no query separated them and the obvious filter was wrong in a way that cost a real
+proposal: measured over one channel, of 74 messages carrying the person's decisions **19 were
+marked `fyi: true`**, so excluding `fyi` from the agents' queues would have removed nineteen
+decisions by the person — one of them a morning instruction requiring an agent to act.
+
+```
+action: none | code | cowork | owner
+```
+
+**Required with `--fyi` and nowhere else**, which is where the overload lived. A flag made
+mandatory everywhere gets answered at minimum cost, which is the level-2 failure this protocol
+already has a note about. `--decide` implies `action: owner` and is never written out: a question
+with one correct answer is not a question.
+
+**It labels and it does not filter.** `action: none` removes nothing from anybody's queue — the
+header counts it, the row shows it, and `--ack` stays the only thing that empties. Dropping
+messages for declaring themselves actionless would rebuild the exact silent hole the field exists
+to expose. Same choice `to: both` got one release earlier, for the same reason.
+
+And `-` in that column is a third fact: **nobody stated it.** Not a synonym for `none`.
 
 ### `ack:` is the only thing that empties an agent's queue
 

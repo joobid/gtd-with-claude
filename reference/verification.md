@@ -375,6 +375,37 @@ method that claimed otherwise would be the phantom control it warns about, one l
 
 ---
 
+## 14 · Work handed to a person goes in a file, not in a pasted block
+
+A block of shell handed over as text loses its last line. In zsh with bracketed paste — the default
+on macOS — every line of a paste runs except the final one when it arrives without a trailing
+newline: that one sits in the buffer waiting for an Enter nobody presses.
+
+**The line left behind is always the one that checks the others**, because that is where checks go.
+Measured three times in one session, on blocks of three and four lines: a `git status` that would
+have shown a staged index, a `git diff --cached` that would have shown the commit was ready, and a
+`gh pr create` that never ran at all — reported afterwards as *"there is no PR"*, which was true and
+had nothing to do with GitHub. Each block ended in silence and read as done.
+
+> **Ship an entry point. `bash <path>/<name>.sh`, one line, nothing to lose.**
+
+It is the rule this method already gives for the writer — *a named entry point is allowed once and
+is reviewable* — pointed at what the agents hand to the person rather than at what they run
+themselves. Three properties come free and none of them survive in a pasted block: the file can
+**check its own preconditions and refuse**, it can **derive what is already done** so running it
+twice is safe, and it **writes a log**, which every command block owes anyway.
+
+**Two more shapes to avoid inside it**, both measured the same day:
+
+- **A verifier weaker than the step it verifies.** `git diff --cached --stat | tail -3` printing
+  nothing is indistinguishable from output lost. The check that follows a step has to be the one
+  whose silence means something — and if you cannot make it so, say what a blank result means.
+- **A guard that is right about the identifier and wrong about the world.** `merge-base
+  --is-ancestor <commit> main` is false after a squash merge, so a release script refused to tag
+  with the words *"the PR is not merged yet"*. It was merged. **A tag publishes a tree**, so
+  compare trees; identity of trees is what a squash preserves. Ask the question the step actually
+  depends on, not the nearest one that has a command.
+
 ## Every command block leaves a record
 
 This is what turns an event into state, and it is what lets the reviewing agent work at all.
