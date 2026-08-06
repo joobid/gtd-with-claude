@@ -155,9 +155,30 @@ not read cannot audit it — and the method promises to keep them informed.
 
 ### `consensus` is agreed. It is not done, and closing is somebody's job
 
+**Whoever receives the agreement stamps it**, with `re:` at the message that proposed it. Both
+readings are defensible and picking neither costs a message every time: the natural move is to
+write `open` over something already agreed and then spend a second file stamping it. This is the
+only assignment needing no coordination — the proposer does not yet know there is agreement, and
+the receiver does. The writer can check the `re:` points at the other agent, which it does, and
+cannot tell a proposal from a reply.
+
 **Nothing closes a message except a `settled` further down its own reply chain.** A thread that
 ends in agreement, with the work never carried out and no closing note written, stays pending —
 and that is correct, not a leak.
+
+**And say what to do when closing stops scaling, because on a busy channel nobody writes
+`settled`.** Measured, and still true two days later: 12 messages declaring `blocks:`, **12 of them
+answered and none closed**. The field then fails in both directions at once — it holds what is
+resolved and names nothing of what is actually piling up. The cause is structural. Closing climbs
+one parent per message, and 38 of one day's 96 messages were chain roots, so it is one `settled`
+per item and the item count is what grows.
+
+The three available answers are all bad and two are measured. Closing by hand is one new file per
+stale one — *42 new messages to remove 42, and the same position next week*. Closing whole threads
+produced zero false positives on the same channel and **lost one of the two messages the fix exists
+to surface**, because a `settled` there had closed a different item earlier: a thread is a rolling
+conversation, not one topic. An `ack:` empties a queue and does not close anything. Pick knowing
+that, rather than discovering it at 42.
 
 The writer refuses the three shapes below, so none of them is anything to remember. What it cannot
 tell you is why each one is there:
@@ -174,18 +195,13 @@ whenever the text does not resemble its pattern: a proposed detector for "this s
 something" — refuse if a line ends in `?` — fired on **0 of 29** real messages, including both true
 positives, because the buried question was prose.
 
-It also closes M19. Twenty-three decisions by the person were written `settled` with `re: -`, and
-the derivation excludes `settled`, so all twenty-three were invisible — one answer arrived nine
-minutes before an agent asked the same thing again. **A decision that opens work is not closed.**
+Twenty-three decisions by the person were written `settled` with `re: -`, and the derivation
+excludes `settled`, so all twenty-three were invisible — one answer arrived nine minutes before an
+agent asked the same thing again. **A decision that opens work is not closed.**
 
 **The residual noise is accepted on purpose.** In a check whose failure mode is silence, coverage
 beats precision: a false positive costs one line and is cleared by writing the missing `settled`.
 The false negative it replaces hid a broken privacy control.
-
-**And the tempting simplification is wrong, which was measured.** Closing a whole *thread* once
-anything in it settles is cleaner and produced zero false positives on the same channel — and lost
-one of the two messages the fix exists to surface, because a `settled` there had closed a different
-item earlier. A thread is a rolling conversation, not one topic.
 
 ### Why `settled` exists and is not `consensus`
 
@@ -242,11 +258,6 @@ Five things about that shape:
 - **Say when the answer diverges from the configuration.** Somebody deciding something they had
   delegated is evidence the configuration is wrong, and nobody notices because each single answer
   feels reasonable.
-
-**A decision that opens work is not `settled`.** `settled` means closed, and the derivation excludes
-it — twenty-three decisions were written that way and all twenty-three were invisible to the other
-agent. The writer now refuses `settled` without `--closes`, so a decision that instructs something
-is `open`, addressed to whoever acts.
 
 **Show it back in the turn you write it**, in one line, in their language. It is a paraphrase
 written by an agent, unsupervised and immutable, that both agents will treat as not reopenable —
@@ -362,8 +373,66 @@ channel-status.sh --channel <channel> --audit <runs dir>
 gtd-msg.sh --channel <channel> --decisions
 ```
 
-Pending is: addressed to me, not `settled`, and with no `settled` down its own reply chain.
-`--selftest` proves it on six cases, one of them the message that used to be lost.
+Pending is: addressed to me, not `settled`, with no `settled` down its own reply chain, and not
+acknowledged by me. `--selftest` proves it on six cases, one of them the message that used to be
+lost.
+
+### `to: both` is broadcast, and the queue used to call it addressed
+
+A record left for whoever comes next and a message to somebody are different objects, and
+`^to: +($ME|both)$` is one pattern that reads as one thing. Measured on a real channel the moment
+the two were told apart: **58 of one agent's 72 open items were broadcast**, not addressed. Merging
+them is what made an agent propose dropping the whole class.
+
+Nothing leaves the queue for being broadcast. The derivation counts it and labels the row, because
+the defect was the misrepresentation, not the volume.
+
+**And `fyi: true` is not the class to exclude either, which cost a real proposal.** The flag says
+*I am not asking the person anything*. A queue needs *nobody has to act*. Two statements, one flag.
+Measured: of 74 messages carrying the person's decisions, **19 were marked `fyi: true`**, so
+excluding `fyi` from the agents' queues removes nineteen decisions by the person — one of them a
+morning instruction requiring an agent to act.
+
+### `ack:` is the only thing that empties an agent's queue
+
+```
+ack: <file> <file> …
+```
+
+The obvious design is a clock — drop broadcast FYIs after N days — and its failure mode is that one
+nobody read disappears in silence while the queue reports itself smaller. **A control whose failure
+mode is to report success**, which is the shape this method exists to catch. Gate expiry on an
+acknowledgement and the failure inverts: unread means it stays.
+
+**It is a claim, not an observation, and that is its correct form.** An agent can acknowledge thirty
+files without opening one. It is not verifiable when written — it is **citable when it fails**, the
+moment that agent asks something an acknowledged message answered, on a channel that is never
+edited. The bargain `head:` already makes: not preventing a stale read, making one detectable
+afterwards.
+
+**A header field, never a side file.** The derivation already closes by citation over a header field
+and the writer already emits one line per key, so it costs one line at each end. A side file would
+invent a storage class outside the protocol, need the same derivation change, and be mutable where a
+message is not.
+
+**No grace period.** Queues are per agent: when one acknowledges, it leaves that queue and the other
+is untouched. A delay only buys a window in which an agent is nagged by something it has declared
+read. `--ack` on a `settled` is refused — acknowledging is not closing.
+
+### The method's half of the smell test
+
+```sh
+channel-status.sh --channel <channel> --me code|cowork --balance
+```
+
+`SKILL.md` says that if the method's artefacts outnumber the project's at the close of a session,
+the method ate the session. Both halves are countable and neither was counted, so the test fired
+only when an agent happened to re-read the file stating it — measured on the day that happened: 27
+channel messages, 2 project files touched, and the day's first-in-order work never started.
+
+Only this half is derived. The project's artefacts live in version control, which this method does
+not require. It is a **warning and not a verdict**: a day of review legitimately produces many
+messages and no files, and no count tells that apart from a session that ate itself.
 
 **`escalated` on its own is the wrong object, and the difference is measured.** Over a full
 working day the channel held **zero** escalations and three unanswered messages addressed to the

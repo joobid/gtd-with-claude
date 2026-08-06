@@ -32,14 +32,10 @@ allow: Bash(<path>/gtd-msg.sh*)
 
 ## What it enforces, so nobody has to remember it
 
-The writer refuses a bad vocabulary, a `consensus` without `--re`, a `settled` without `--closes`,
-a `consensus` without `--lands-in`, a message reaching the person without `--decide`, `--fyi` or
-`--record`, and an empty body. **It reads its own clock and its own commit.**
-
-None of that is worth restating here: the refusal names the flag and the reason. What is worth
-knowing is **why the refusals exist at all** — a guard that asks you to pick something fails
-loudly when you have not looked, where one that tries to detect fails silently on the message that
-does not resemble the pattern.
+Nothing here restates the refusals: each one names its flag and its reason as it fires, and it
+reads its own clock and its own commit. What is worth knowing is **why they exist at all** — a
+guard that asks you to pick something fails loudly when you have not looked, where one that tries
+to detect fails silently on the message that does not resemble the pattern.
 
 ## Nothing here is ever reopened
 
@@ -90,8 +86,22 @@ not appeared, the message nobody answered. Not "waiting for the owner".
 |---|---|---|
 | `open` | You are asking. Nothing has been agreed | — |
 | `consensus` | The two agents agree | **`re:` must point at a message from the other agent.** The script refuses without it |
-| `settled` | The person decided | `from: owner`, `to: both`. No exchange required, and not reopened |
+| `settled` | The person decided, or the agreed thing is done | `--closes` quoting the message it closes. A decision that opens work is `open`, addressed to whoever acts |
 | `escalated` | The disagreement survived the facts | Goes to the person with **both positions and the evidence each rests on**, not as a request to arbitrate |
+
+## Saying you read it
+
+```sh
+gtd-msg.sh --author code --from code --to cowork --state open \
+           --slug read-the-tranche --ack "<file> <file> <file>" <<'EOF'
+## Read, nothing needed
+EOF
+```
+
+`--ack` is the only thing that takes a broadcast message out of **your** queue; the other agent's
+is untouched. It is refused on a `settled`, because acknowledging is not closing, and refused on a
+filename that is not a message, because an ack for nothing is silent. One message acknowledges as
+many as you name. `protocol.md` carries why this is an acknowledgement rather than a clock.
 
 ## Recording what the person said
 

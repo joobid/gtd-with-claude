@@ -268,6 +268,17 @@ This is the general shape of every guardrail migration, and it is silent by cons
 you widen a check, **re-apply it to its own existing record in the same change**, and say that
 you did.
 
+**And the same applies to a measurement somebody quoted at you.** A message is evidence of what was
+true when it was written. `head:` detects that the tree moved underneath one; nothing detects that a
+figure *inside* one has aged. Measured on one project in under five hours, three times, both agents:
+a red check quoted as current had been fixed the same day it was reported; an unidentified cause
+quoted as open had been identified 39 minutes later, by the agent now quoting the question; and an
+agent's own hour-old proposal would have hidden nineteen of the person's decisions.
+
+**Before resting a decision on a quoted measurement, re-run it.** Each of those cost one command.
+All three happened with the staleness field printed on screen, so this is a rule with no mechanism —
+written down as one, on the same terms as every other class that has no mechanism here.
+
 ## 11 · When this check passes, what else would have made it pass?
 
 **Write down the cheapest wrong thing that would also pass**, before trusting the check. For a

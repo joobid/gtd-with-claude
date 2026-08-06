@@ -28,7 +28,7 @@
 set -euo pipefail
 
 AUTHOR=""; FROM=""; TO=""; RE="-"; STATE="open"; SLUG=""; SELFTEST=""
-CLOSES=""; LANDS_IN=""; DECISIONS=""; DECIDE=""; BLOCKS=""; FYI=""; RECORD=""
+CLOSES=""; LANDS_IN=""; DECISIONS=""; DECIDE=""; BLOCKS=""; FYI=""; RECORD=""; ACK=""
 CHANNEL="${GTD_CHANNEL:-.runs/exchange}"
 
 while [ $# -gt 0 ]; do
@@ -45,6 +45,7 @@ while [ $# -gt 0 ]; do
     --blocks)  BLOCKS="$2";  shift 2 ;;
     --fyi)     FYI=1;        shift ;;
     --record)  RECORD=1;     shift ;;
+    --ack)     ACK="$2";     shift 2 ;;
     --channel) CHANNEL="$2"; shift 2 ;;
     --decisions) DECISIONS=1; shift ;;
     --selftest) SELFTEST=1; shift ;;
@@ -348,6 +349,29 @@ EOF
   fi
   rm -rf "$secdir"
 
+  # --- 0.8.0: the acknowledgement -----------------------------------------
+  # Three assertions, and the third is the one that matters. An --ack naming a file
+  # that does not exist has to be refused, or a typo acknowledges nothing and says so
+  # to nobody -- the silent pass this whole script is built against.
+  LABEL="refuses --ack naming a message that does not exist"; SAYING="not a message under"
+  refuses --author code --from code --to cowork --slug a1 --ack "20260101-000000-nobody-nothing.md"
+
+  LABEL="refuses --ack on a settled: acknowledging is not closing"; SAYING="not closing"
+  refuses --author code --from code --to cowork --state settled --slug a2 \
+          --re "$target" --closes "The thing being asked" --ack "$target"
+
+  LABEL="accepts --ack naming a real message, and records it in the front matter"
+  checks=$((checks + 1))
+  ackout=$(bash "$0" --channel "$probe" --author code --from code --to cowork \
+                     --slug a3 --ack "$target" <<'EOF' 2>&1
+## read it
+EOF
+  ) || true
+  if [ -f "$ackout" ] && grep -qE "^ack: .*$target" "$ackout"; then
+    printf '  ok    %s\n' "$LABEL"
+  else
+    printf '  FAIL  %s\n' "$LABEL"; fails=$((fails + 1))
+  fi
 
   printf 'EXAMINED: %d checks, exercising the shipped writer against %s\n' "$checks" "$probe"
   # Said rather than implied. The tty guard is real and one line long, and the obvious
@@ -485,6 +509,51 @@ if [ "$TO" = "owner" ] || [ "$TO" = "both" ]; then
     echo "  If nothing stops, it is not a decision -- it is information. Use --fyi." >&2
     exit 2
   fi
+fi
+
+# ---------------------------------------------------------------------------
+# --ack: the only thing that takes a broadcast out of an agent's queue.
+#
+# The obvious design is a clock -- drop broadcast FYIs after N days -- and its failure
+# mode is that an FYI nobody read disappears in silence while the queue reports itself
+# smaller. That is a control whose failure mode is to report success, which is the shape
+# this whole method is written against. Gate it on an acknowledgement and the failure
+# inverts: unread means it stays.
+#
+# It is a CLAIM, not an observation, and that is its correct form. An agent can
+# acknowledge thirty files without opening one. It is not verifiable when written -- it is
+# CITABLE when it fails, the moment that agent asks something an acknowledged message
+# answered, because both files are on a channel that is never edited. Same class as
+# `head:`, which does not prevent a stale read and makes one detectable afterwards.
+#
+# A header field on an ordinary message, never a side file. The derivation already closes
+# by citation over a header field and the writer already emits the front matter one line
+# per key, so the field costs one line at each end; a `.ack-<agent>` file would invent a
+# storage class outside the protocol, need the same derivation change, and be mutable
+# where a message is not. One message can acknowledge thirty, so the cost argument does
+# not favour the file either.
+#
+# NO GRACE PERIOD, and that is a decision rather than an omission. Queues are per-agent:
+# when A acknowledges, it leaves A's queue and B's is untouched. A delay after the ack
+# only buys a window in which an agent is still nagged by something it has declared read.
+#
+# The guard is a SELECTION, like --closes: every name must be a message that exists. A
+# typo that silently acknowledged nothing would be the same silent pass as everything
+# else here.
+# ---------------------------------------------------------------------------
+if [ -n "$ACK" ]; then
+  if [ "$STATE" = settled ]; then
+    echo "gtd-msg: --ack says you read it. --state settled says it is closed." >&2
+    echo "  Acknowledging is not closing: a thread both agents have read is still open." >&2
+    exit 2
+  fi
+  for a in $ACK; do
+    if [ ! -f "$CHANNEL/$a" ]; then
+      echo "gtd-msg: --ack names $a, which is not a message under $CHANNEL." >&2
+      echo "  Name the files as the derivation prints them. An ack for nothing is silent." >&2
+      exit 2
+    fi
+  done
 fi
 
 # ---------------------------------------------------------------------------
@@ -632,6 +701,7 @@ MSG="$CHANNEL/$TS-$AUTHOR-$SLUG.md"
   if [ -n "$BLOCKS" ]; then echo "blocks: $BLOCKS"; fi
   if [ -n "$FYI" ]; then echo "fyi: true"; fi
   if [ -n "$RECORD" ]; then echo "record: true"; fi
+  if [ -n "$ACK" ]; then echo "ack: $ACK"; fi
   echo "head: $HEAD"
   echo "---"
   echo

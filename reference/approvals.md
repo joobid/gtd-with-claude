@@ -121,6 +121,25 @@ method stops guaranteeing what it says it guarantees — and offer the nearest s
 usually: **the agents prepare it completely and the person confirms in one step**. That preserves
 most of the saving without moving the decision.
 
+### And if they retire one in passing, which does not look like this at all
+
+The section above answers an *ask*. It does not answer the sentence that removes a floor row
+without looking like a configuration change — and that is the one that actually happens.
+
+Measured: a floor entry reading *«merging to `main` admits no exception by sprint, by prior
+approval, by urgency, or by consensus between agents»*, and later, in ordinary instruction, *«decide
+the numbering and whether it merges by consensus»*. The rule's own final clause names the form of
+the sentence retiring it. It is their rule and they can move it. **A rule retired in passing is
+retired with nobody noticing**, which is why the floor is written down separately from everything
+else.
+
+**Name the collision, read the instruction as narrowly as the evidence allows, and record it as a
+message.** That held — because the case was empty: the branch carried nothing that was not already
+in `main`, so no merge was performed and no precedent was set either way. With real content,
+obeying the instruction and obeying the rule are the same choice, and reading narrowly only
+postpones it. The narrow reading is an honest deferral, not a resolution, and the message is what
+makes the deferral visible when it comes round again.
+
 ---
 
 ## Part 3 · The daily triage

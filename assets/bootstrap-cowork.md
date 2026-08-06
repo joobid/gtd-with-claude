@@ -92,6 +92,19 @@ A BARE grep FOR ANY STATE IS WRONG, and that is why these derive: files are immu
 answered message keeps its state for ever and the bare form returns every one ever raised. And
 they declare what they examined, because zero from the wrong directory looks like a quiet channel.
 
+THE MANDATORY FLAGS LIVE ONLY IN THE WRITER, so without the skill installed you learn them by being
+refused. --closes "<text quoted from the message it closes>" on state settled. --lands-in <path> on
+state consensus. --decide, --fyi or --record on anything reaching the person.
+
+--ack "<file> <file>" is not mandatory and is the ONLY thing that takes a broadcast message out of
+YOUR queue, leaving the other agent's alone -- refused on a settled, because acknowledging is not
+closing.
+
+THE QUEUE SAYS HOW MUCH OF ITSELF IS BROADCAST. `to: both` is a record for whoever comes next, not
+a message to you, and reading the two as one is what made an agent propose dropping the class: of
+74 messages carrying the person's decisions, 19 were marked fyi. Nothing leaves the queue for being
+broadcast, and nothing leaves it for being an FYI. An ack does.
+
 PUBLISH YOUR READING BEFORE ACTING ON IT. One message, to: owner, state: open: what the
 derivation named, what you take the outstanding work to be, WHAT YOU DID NOT READ AND COULD NOT
 RECONSTRUCT, and what you intend to do next. A gap announces itself; a confident wrong

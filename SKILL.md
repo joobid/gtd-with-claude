@@ -2,7 +2,7 @@
 name: gtd-with-agents
 description: Set up and run the three-party working method for a project driven by Claude Code and Claude Cowork together — a file-based channel the two agents use to talk to each other, an explicit delegation contract that records what the person decides and what they hand over, and the verification culture that makes agreement between two agents worth anything. Use this whenever someone is starting a project with both Claude Code and Cowork, asks how the two should coordinate, says they are tired of copying questions from one session and pasting answers into the other, asks "who decides what here", "how do I stay informed without approving everything", "how much can I delegate", or wants to install a working agreement, an exchange channel, or an approval policy between agents. Also use when a session arrives cold at a project that already has this method installed and needs to pick it up.
 metadata:
-  version: 0.7.0
+  version: 0.8.0
 ---
 
 # Get Things Done with Claude
@@ -247,9 +247,9 @@ this is just not leaving your own machinery unusable.
    <path>/channel-status.sh --selftest
    ```
 
-   Six assertions over a synthetic channel built to contain the case this derivation exists for:
-   a thread both agents agreed on that nobody carried out. It runs in a scratch directory and
-   touches nothing of yours.
+   It reports its own count of assertions over a synthetic channel built to contain the case this
+   derivation exists for: a thread both agents agreed on that nobody carried out. It runs in a
+   scratch directory and touches nothing of yours.
 4. **Check that the hook fires, not that the file exists.** Ask the person to type any prompt and
    report whether the notice appears. Two pieces means two ways to have done half the job, and
    both of them leave the script on disk looking installed.
@@ -427,11 +427,10 @@ in this order, and nothing outside them:
 and it covers one message kind: what you type in the chat passes through no writer at all.
 
 **There is no word cap**, and that was measured rather than judged. A 400-word limit shipped for
-one round; 8 of 9 real bodies were over it — 1015, 777, 704, 642, 593, 558, 502, 480, 400. And a
-cap cannot tell **compressing** from **hiding**: faced with a limit, an agent can write less,
-split in two, or leave a summary and point at the channel. All three fit the limit, and the third
-is the defect the four sections exist to close. The complaint was *paragraphs I cannot follow,
-with no clear actions* — locatable actions, not volume.
+one round and 8 of 9 real bodies were over it. A cap also cannot tell **compressing** from
+**hiding**: faced with one, an agent can write less, split in two, or leave a summary and point at
+the channel — all three fit, and the third is the defect the four sections exist to close. The
+complaint was *paragraphs I cannot follow, with no clear actions*: locatable actions, not volume.
 
 **Four things do not go in, and this half is not mechanised:**
 
@@ -440,12 +439,10 @@ with no clear actions* — locatable actions, not volume.
 - appraisal formulas — *good question*, *interesting*, *worth doing*, *you are right*
 - the narration of how the finding was reached
 
-Detecting those would be a classifier, and a classifier in this series fired on **0 of 29** real
-messages including both it existed to catch. It is a writing rule sitting beside four
-requirements that are not, and saying which is which is the point.
-
-**The reasoning is not deleted — it stays in the channel.** What is removed from what reaches
-them is the narration, not the information.
+Detecting those would be a classifier, and `protocol.md` prices what classifiers do here. It is a
+writing rule sitting beside four requirements that are not, and saying which is which is the point.
+**The reasoning is not deleted — it stays in the channel.** What is removed from what reaches them
+is the narration, not the information.
 
 ### When they ask what happens next
 

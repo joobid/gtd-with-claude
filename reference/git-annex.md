@@ -109,6 +109,27 @@ The two settings files are not the same object either, and one line saves an arg
 - **`.claude/settings.local.json` is not.** It carries one machine's absolute paths and one
   person's accumulated approvals, and neither travels.
 
+## A reviewing sandbox may be able to create files and not to remove them
+
+Measured across a mounted project: `touch` succeeds, `mv` succeeds, and `rm` and `find -delete`
+both return *Operation not permitted* — anywhere under the mount, and normally outside it. It was
+first found as a property of `.git/index.lock`, then generalised to `.git`. It is neither: it is the
+mount.
+
+Three consequences belong to the method rather than to any project.
+
+- **An unattended reviewing session cannot clean up after itself.** Every stray file needs the
+  person, which is the thing unattended operation exists to avoid.
+- **`git worktree add` from that side leaves a permanent orphan registry**, which `git worktree
+  prune` will not remove because it stays locked.
+- **The shape that works is cloning to `/tmp` with `--no-local`.**
+
+So: **no `git worktree add`, and no scratch files under the mounted repository, from the reviewing
+side.** Note what it costs to establish this — probing it is a create-then-delete in the place
+delete is known to fail, so the probe leaves behind exactly what it is measuring. Confirming it for
+this document left a zero-byte file the person had to remove, in the repository that ships this
+paragraph.
+
 ## Reviewing agent permissions
 
 Tool permission files accumulate standing approvals, and they accumulate in the direction of
