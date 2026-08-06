@@ -172,15 +172,15 @@ def build_fixture(ch: Path, tmp: Path) -> dict[str, set[str]]:
     c1 = write("cowork", "cowork", "code", q4, "consensus", "answer-to-q-four",
                '--lands-in MANIFEST ')
     # Escalations are addressed to the person: that is what escalating means here.
-    e1 = write("code", "code", "owner", "-", "escalated", "esc-live", "--fyi ")
-    e2 = write("code", "code", "owner", "-", "escalated", "esc-closed", "--fyi ")
+    e1 = write("code", "code", "owner", "-", "escalated", "esc-live", "--fyi --action none ")
+    e2 = write("code", "code", "owner", "-", "escalated", "esc-closed", "--fyi --action none ")
     d1 = write("cowork", "owner", "both", e2, "settled", "decision-closing-esc",
-               '--closes body --fyi ')
+               '--closes body --fyi --action none ')
     # Was `settled` with `re: -` until the writer stopped allowing it, and that refusal is
     # M19: twenty-three real decisions were recorded exactly this way, and every one was
     # invisible because the derivation excludes `settled`. A decision that opens work is
     # `open`, addressed to whoever acts -- so the fixture cannot express the old shape either.
-    d2 = write("code", "owner", "both", "-", "open", "decision-standalone", "--fyi ")
+    d2 = write("code", "owner", "both", "-", "open", "decision-standalone", "--fyi --action none ")
     # `re:` pointing at the other agent, because that is what the protocol requires and
     # the shipped writer now refuses without it. The hand-written block this fixture used
     # to be built from let an invalid `consensus` through for months, and nothing noticed
@@ -200,7 +200,7 @@ def build_fixture(ch: Path, tmp: Path) -> dict[str, set[str]]:
     # for a correct and an incorrect query is not checking that query at all. It shipped
     # blind through the round that fixed exactly this defect elsewhere.
     w2 = write("cowork", "cowork", "owner", w1, "consensus", "agreed-with-you-not-done",
-               '--lands-in MANIFEST --fyi ')
+               '--lands-in MANIFEST --fyi --action none ')
 
     return {
         # d2 belongs here now, and its arrival IS M19: the same decision written the
@@ -401,7 +401,7 @@ def self_test(ch: Path, expect: dict[str, set[str]], tmp: Path) -> bool:
 
     mutations = [
         ("an extra decision by the person", "owner",
-         lambda: plant("owner", "both", "-", "open", "mutant-decision", "--fyi ")),
+         lambda: plant("owner", "both", "-", "open", "mutant-decision", "--fyi --action none ")),
         ("a new unanswered question", "open",
          lambda: plant("code", "cowork", "-", "open", "mutant-question")),
         ("a new live escalation", "escalated",

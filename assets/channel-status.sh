@@ -40,6 +40,15 @@
 
 set -euo pipefail
 
+# The version this file IS. A deployed copy lives outside the skill tree by design, so
+# until this constant existed nothing could ask a running script which release it came
+# from. Measured the day it was missing: a skill upgraded to 0.8.0 left both executables
+# byte-for-byte at 0.7.0 -- identical to the previous release's assets, not drifted -- and
+# both agents read documentation for two flags their machine did not have. The install log
+# had the evidence and nobody read it as one: 18 assertions in the asset's selftest, 13 in
+# the deployed one, same day, same page.
+GTD_VERSION="0.9.0"
+
 CHANNEL="${GTD_CHANNEL:-.runs/exchange}"
 ME="code"
 JSON=0
@@ -59,6 +68,7 @@ while [ $# -gt 0 ]; do
     --delegation) MODE=deleg; shift ;;
     --blocked) MODE=blocked; shift ;;
     --balance) MODE=balance; shift ;;
+    --version) echo "channel-status.sh $GTD_VERSION"; exit 0 ;;
     --paths)   PATHS="$2"; shift 2 ;;
     -h|--help) sed -n '3,38p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "channel-status: unknown argument: $1" >&2; exit 2 ;;
@@ -66,12 +76,74 @@ while [ $# -gt 0 ]; do
 done
 MODE="${MODE:-notice}"; RUNS="${RUNS:-}"; ACCEPT="${ACCEPT:-0}"; PATHS="${PATHS:-gtd-config.md}"
 
+# ---------------------------------------------------------------------------
+# Is what runs here the same as what the skill ships?
+#
+# Step 4 copies this file and the writer OUT of the skill tree on purpose: the
+# implementing tool cannot read the reviewing tool's plugin cache, so an asset that lives
+# only there cannot be executed from the other side. Correct, and it creates two files
+# with independent lives and no way to notice they have separated. Upgrading the skill
+# upgrades the DOCUMENTATION BOTH AGENTS READ and touches NOTHING EITHER OF THEM RUNS.
+#
+# IT FAILS OPEN, and that direction is the whole design. In Cowork the skill lives under a
+# regenerated temporary path, so "I cannot find the asset" and "the asset differs" are
+# different facts and only the second is worth a line. A checker that shouted at the first
+# would be switched off inside a week, which is the fate of every rule that obstructs safe
+# work -- this file already says that about the declared-scope check.
+#
+# It reports. It does not deploy, and it must not: `.claude/**` is the person's row in
+# every configuration this method writes, so redeployment waits for their turn.
+#
+# THE HASH COMMAND IS NOT THE SAME ON BOTH PLATFORMS, and the first version of this got it
+# wrong in the direction that says nothing: `command -v sha256sum || return 0` fails open
+# on macOS, where the command is `shasum -a 256` -- so the check never ran at all on the
+# platform the person uses, silently, in the release that added it. This file already
+# carried the correct pattern a hundred lines below, in the A-20 scanner.
+hash_of() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" 2>/dev/null | cut -d' ' -f1
+  elif command -v shasum   >/dev/null 2>&1; then shasum -a 256 "$1" 2>/dev/null | cut -d' ' -f1
+  fi
+}
+version_drift() {
+  self=$(hash_of "$0")
+  [ -n "$self" ] || return 0
+  for d in "$PWD/.claude/skills/gtd-with-agents" "$HOME/.claude/skills/gtd-with-agents"; do
+    a="$d/assets/$(basename "$0")"
+    [ -f "$a" ] || continue
+    theirs=$(hash_of "$a")
+    [ -n "$theirs" ] || return 0
+    [ "$self" = "$theirs" ] && return 0
+    av=$(sed -n 's/^GTD_VERSION="\(.*\)"$/\1/p' "$a" | head -1)
+    echo "DRIFT: this is $GTD_VERSION and the installed skill ships ${av:-an unlabelled version}." >&2
+    echo "  running: $0" >&2
+    echo "  shipped: $a" >&2
+    echo "  Redeploy BOTH this and gtd-msg.sh, or neither: one writes a header the other reads." >&2
+    return 0
+  done
+  return 0
+}
+
 # A-02 at level 1. `grep -l '^state: open' *.md` returned 33 where there were 32, three
 # times in eighteen hours across three sessions: the channel keeps its own README, and
 # that README documents the vocabulary with a line starting `state: open` in column 0, so
 # it counts itself. Nobody was careless -- the glob was wrong and looked right.
 # One helper, so a count cannot drift from the derivation that uses it.
 messages() { ls -1 "$1"/2*.md 2>/dev/null || true; }
+
+# Age in hours from a message's own filename. TWO DATE IMPLEMENTATIONS, and the difference
+# is silent: `date -u -d` is GNU and macOS has no `-d` at all, so every age fell through
+# the fallback and printed 0h on the platform the person uses. Not a crash -- a column of
+# zeros that reads like a fresh channel, which is worse. BSD needs `-j -f <format>`.
+age_h() {
+  ts="$1"                                   # YYYYMMDD-HHMMSS from the filename
+  d="${ts%%-*}"; t="${ts#*-}"
+  hm="$(echo "$d" | cut -c1-8) $(echo "$t" | cut -c1-2):$(echo "$t" | cut -c3-4)"
+  then_s=$(date -u -d "$hm" +%s 2>/dev/null \
+        || date -u -j -f "%Y%m%d %H:%M" "$hm" +%s 2>/dev/null \
+        || echo "")
+  if [ -z "$then_s" ]; then echo "?"; return 0; fi
+  echo $(( ( $(date -u +%s) - then_s ) / 3600 ))
+}
 
 if [ "$MODE" = count ]; then
   n=$(messages "$CHANNEL" | grep -c . || true)
@@ -325,6 +397,46 @@ if [ -n "$SELFTEST" ]; then
   assert "--balance names the half it cannot see (M30)" \
          "$(bash "$0" --channel "$probe" --me code --balance 2>&1 || true)" "NOT EXAMINED"
 
+  # --- 0.9.0: action is labelled, never filtered; and the drift check ------
+  # F is `action: none` and it must still appear. A version of this feature that dropped
+  # it would pass every other assertion here, which is exactly why this one exists.
+  printf -- '---\nfrom: cowork\nto: both\nre: -\nstate: open\nfyi: true\naction: none\nhead: clock:x\n---\n\n## nobody has to move\n' \
+    > "$probe/20260101-000013-cowork-f-noaction.md"
+  fout=$(bash "$0" --channel "$probe" --me code 2>/dev/null) || true
+  assert "action: none is still shown -- labelled, never filtered (M25)" \
+         "$fout" "000013-cowork-f-noaction"
+  assert "and the header counts how many declared it" "$fout" "declare action: none"
+  rm -f "$probe/20260101-000013-cowork-f-noaction.md"
+
+  assert "--version reports the constant this file carries (M32)" \
+         "$(bash "$0" --version 2>&1)" "channel-status.sh $GTD_VERSION"
+
+  # The drift check has to be seen NOT firing where there is nothing to compare against,
+  # because failing open is the property that keeps it installed. Asserting only that it
+  # fires would pass on a version that shouts on every Cowork session, where the skill
+  # lives under a regenerated temporary path.
+  quiet=$(bash "$0" --channel "$probe" --me code 2>&1 >/dev/null) || true
+  checks=$((checks + 1))
+  if printf '%s' "$quiet" | grep -q DRIFT; then
+    printf '  FAIL  the drift check stays silent when there is no asset to compare (M32)\n'
+    fails=$((fails + 1))
+  else
+    printf '  ok    the drift check stays silent when there is no asset to compare (M32)\n'
+  fi
+
+  # And seen firing, against a planted skill tree carrying a different file. A checker
+  # never observed to fire is not evidence, including this one.
+  # Planted under a fake HOME rather than by cd-ing into the probe: `$0` may be relative,
+  # and changing directory under it makes `bash "$0"` fail to find the script at all --
+  # which reads exactly like the check not firing. Caught by this assertion on its first
+  # run, which is the assertion doing its job on itself.
+  fake="$probe/.claude/skills/gtd-with-agents/assets"; mkdir -p "$fake"
+  sed 's/^GTD_VERSION=.*/GTD_VERSION="9.9.9"/' "$0" > "$fake/$(basename "$0")"
+  loud=$( HOME="$probe" bash "$0" --channel "$probe" --me code 2>&1 >/dev/null ) || true
+  assert "and it fires when the shipped asset differs (M32)" "$loud" "DRIFT: this is"
+  assert "naming the version the skill ships" "$loud" "9\.9\.9"
+  rm -rf "$probe/.claude"
+
   # And the failure mode that matters more than any hit: nothing to look at must not
   # read as nothing to find.
   empty="${TMPDIR:-/tmp}/cs-empty-$$"; mkdir -p "$empty"
@@ -384,7 +496,7 @@ if [ "$MODE" = blocked ]; then
   for f in $(grep -l '^decide:' 2*.md 2>/dev/null || true); do
     grep -lq "^re: $f\$" 2*.md 2>/dev/null && continue
     nd=$((nd + 1))
-    age=$(( ( $(date -u +%s) - $(date -u -d "$(echo "$f" | cut -c1-8) $(echo "$f" | cut -c10-11):$(echo "$f" | cut -c12-13)" +%s 2>/dev/null || date -u +%s) ) / 3600 ))
+    age=$(age_h "$f")
     printf '  decide  %4sh  %s\n' "$age" "$f"
   done
   # The declared field, checked against reality rather than trusted. It fails both ways:
@@ -459,7 +571,7 @@ if [ "$MODE" = deleg ]; then
   if [ "$merged" = yes ] || [ -z "$br" ] || [ "$br" = main ]; then
     echo "  DELEGATION: closed. The window is the life of a branch."
   else
-    d=$(( ( $(date -u +%s) - $(date -u -d "$(echo "$acc" | cut -c1-8) $(echo "$acc" | cut -c10-11):$(echo "$acc" | cut -c12-13)" +%s 2>/dev/null || echo "$(date -u +%s)") ) / 3600 ))
+    d=$(age_h "$acc")
     echo "  DELEGATION: open, ${d}h since it was accepted."
     echo "  Still the person's, always: the merge, approving a plan, accepting a closure,"
     echo "  changing scope, and the permission configuration."
@@ -482,6 +594,7 @@ if [ "$MODE" = fyi ]; then
   exit 0
 fi
 
+version_drift
 [ -d "$CHANNEL" ] || exit 0
 cd "$CHANNEL"
 # `2*.md` and not `*.md`: the channel carries its own README and message template, and a
@@ -530,6 +643,7 @@ done
 
 waiting=""
 bcast=0
+noact=0
 for f in $(grep -lE "^to: +($ME|both)\$" 2*.md 2>/dev/null || true); do
   if grep -qE '^state: +settled$' "$f"; then continue; fi
   if printf '%s' "$closed" | grep -qx "$f"; then continue; fi
@@ -540,6 +654,7 @@ for f in $(grep -lE "^to: +($ME|both)\$" 2*.md 2>/dev/null || true); do
   # rather than from the filename, because a slug may contain the other agent's name.
   if printf '%s' "$acked" | grep -qx "$f"; then continue; fi
   grep -qE "^to: +both\$" "$f" && bcast=$((bcast + 1))
+  grep -qE "^action: +none\$" "$f" && noact=$((noact + 1))
   waiting="$waiting$f"$'\n'
 done
 
@@ -557,7 +672,11 @@ body=$( {
   # whoever comes next and a message to somebody are different objects, and merging them
   # is what made an agent propose dropping the whole class. Counted, not dropped: the
   # column below says which each one is, and nothing leaves the queue for being broadcast.
+  # `action: none` is counted here and subtracted from nothing. The count is the point:
+  # it says how much of the queue has declared that nobody has to move, which is the
+  # question `fyi:` was being asked and could not answer.
   echo "CHANNEL: $n open to you -- $((n - bcast)) addressed, $bcast broadcast to both."
+  [ "$noact" -gt 0 ] && echo "  $noact of them declare action: none. Nothing is dropped for saying so."
   printf '%s' "$waiting" | grep -v -- "-$ME-" > "${TMPDIR:-/tmp}/cs-other-$$" || true
   printf '%s' "$waiting" | grep -- "-$ME-" > "${TMPDIR:-/tmp}/cs-mine-$$" || true
   for part in other mine; do
@@ -571,9 +690,14 @@ body=$( {
     # Age, because a --decide from forty hours ago and one from ten minutes ago stop
     # being the same object the moment they are seen next to each other. No new field:
     # the timestamp is already in the filename.
-    age=$(( ( $(date -u +%s) - $(date -u -d "$(echo "$f" | cut -c1-8) $(echo "$f" | cut -c10-11):$(echo "$f" | cut -c12-13)" +%s 2>/dev/null || date -u +%s) ) / 3600 ))
+    age=$(age_h "$f")
     reach=to-you; grep -qE "^to: +both\$" "$f" && reach=broadcast
-    printf '  %-10s %3sh  %-9s %s/%s\n' "$st" "$age" "$reach" "$CHANNEL" "$f"
+    # `action:` is LABELLED and never filtered. Dropping a message for declaring itself
+    # actionless would rebuild the silent hole the field exists to expose, and `--ack`
+    # stays the only thing that empties a queue. `-` means nobody stated it, which is a
+    # third fact and not a synonym for none.
+    act=$(sed -n 's/^action: *//p' "$f" | head -1)
+    printf '  %-10s %3sh  %-9s %-6s %s/%s\n' "$st" "$age" "$reach" "${act:--}" "$CHANNEL" "$f"
   done < "$fl"
   done
   rm -f "${TMPDIR:-/tmp}/cs-other-$$" "${TMPDIR:-/tmp}/cs-mine-$$"

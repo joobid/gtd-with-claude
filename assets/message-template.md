@@ -103,6 +103,25 @@ is untouched. It is refused on a `settled`, because acknowledging is not closing
 filename that is not a message, because an ack for nothing is silent. One message acknowledges as
 many as you name. `protocol.md` carries why this is an acknowledgement rather than a clock.
 
+## `fyi:` and `action:` are two statements
+
+`fyi: true` says **you are not asking the person anything**. `action:` says **who has to do
+something** — `none`, or a role. Those were one flag until 0.9.0, and the queue could not tell them
+apart: measured over one channel, of 74 messages carrying the person's decisions **19 were marked
+`fyi: true`**, so the obvious filter would have removed nineteen of their own decisions from both
+agents' queues — one an instruction from that morning requiring an agent to act.
+
+```sh
+--fyi --action none      nothing here needs the person, and nobody has to move
+--fyi --action code      nothing here needs the person, and code still has to act
+--decide "<the choice>"  implies action: owner. Never write it out
+```
+
+`--action` is required **with `--fyi` and nowhere else**, which is where the overload lived. A flag
+made mandatory everywhere is answered at minimum cost. And `action: none` **removes nothing from
+anybody's queue**: it is labelled and counted, like `to: both` before it, because dropping messages
+for declaring themselves actionless rebuilds the hole the field exists to expose.
+
 ## Recording what the person said
 
 A `from: owner` message is a paraphrase you are writing **about somebody else**, that both agents

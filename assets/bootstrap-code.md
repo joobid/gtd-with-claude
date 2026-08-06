@@ -72,9 +72,21 @@ THE MANDATORY FLAGS LIVE ONLY IN THE WRITER, so without the skill installed you 
 refused. --closes "<text quoted from the message it closes>" on state settled. --lands-in <path> on
 state consensus. --decide, --fyi or --record on anything reaching the person.
 
+--action none | code | cowork | owner is REQUIRED WITH --fyi and nowhere else. `fyi: true` says you
+are not asking the person anything; `action:` says who has to move. They were one flag until 0.9.0
+and no query separated them: of 74 messages carrying the person's decisions, 19 were marked fyi, so
+the obvious filter would have hidden nineteen of their own decisions. --decide implies action: owner.
+
 --ack "<file> <file>" is not mandatory and is the ONLY thing that takes a broadcast message out of
 your queue; it leaves the other agent's alone, and it is refused on a settled because acknowledging
-is not closing.
+is not closing. Nothing leaves a queue for being broadcast, or an FYI, or action: none -- those are
+labelled and counted, never dropped.
+
+CHECK WHAT YOU RUN, NOT WHAT YOU READ. `<path>/gtd-msg.sh --version` and
+`<path>/channel-status.sh --version`. The deployed copies live outside the skill tree and an upgrade
+does not move them: measured once, a skill at 0.8.0 with both executables byte-for-byte at 0.7.0.
+The derivation prints one DRIFT line if it can compare and they differ, and stays silent if it
+cannot find the asset.
 
 <channel>/message-template.md says how to call it.
 

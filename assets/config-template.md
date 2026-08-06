@@ -31,11 +31,24 @@ The two agents read skills from **different stores**, and neither can see the ot
 the skill is loaded over there is an event in another process — so it is recorded here, where
 both can read it.
 
-| Agent | Skill available to it | Self-reported |
-|---|---|---|
-| Reviewing (`<tool>`) | `<yes / no>` | `<date>` |
-| Implementing (`<tool>`) | `<yes, at ~/.claude/skills / yes, at .claude/skills / no>` | `<date>` |
+| Agent | Skill available to it | Skill version | Self-reported |
+|---|---|---|---|
+| Reviewing (`<tool>`) | `<yes / no>` | `<x.y.z>` | `<date>` |
+| Implementing (`<tool>`) | `<yes, at ~/.claude/skills / yes, at .claude/skills / no>` | `<x.y.z>` | `<date>` |
 | How it got there | `<unzipped from a release / cp -R from the plugin cache / other>` |
+
+**And the row that answers a different question — what actually executes.** The skill's
+version and the deployed executables' versions are two facts, and until they were written
+down separately they were assumed to be one. Measured: a skill at 0.8.0 with both deployed
+files still at 0.7.0, byte-for-byte, for as long as nobody looked.
+
+| Deployed file | Version it reports | Redeployed |
+|---|---|---|
+| `<path>/gtd-msg.sh` | `<gtd-msg.sh --version>` | `<date>` |
+| `<path>/channel-status.sh` | `<channel-status.sh --version>` | `<date>` |
+
+**Both or neither.** `ack:` is written by one and read by the other, so half a redeployment
+leaves a derivation looking for a header nothing produces.
 
 **Each side measures itself and publishes the result. Neither fills in the other's row.**
 
